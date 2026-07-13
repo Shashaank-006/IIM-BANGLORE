@@ -1,0 +1,127 @@
+import { createContext, useContext, useState, useCallback } from 'react';
+
+const AuthContext = createContext(null);
+
+// Mock user database - in a real app this would be an API call
+const MOCK_USERS = [
+  {
+    email: 'priya.nair@nic.in',
+    password: 'GovWatch@2026',
+    name: 'Priya Nair',
+    role: 'Joint Secretary, Ministry of Rural Development',
+    employeeId: 'IAS-TG-012',
+    department: 'Ministry of Rural Development',
+    initials: 'PN',
+  },
+  {
+    email: 'ranjit.sahu@cag.gov.in',
+    password: 'Audit@2026',
+    name: 'Ranjit Kumar Sahu',
+    role: 'CAG Auditor',
+    employeeId: 'CAG-CG-045',
+    department: 'Comptroller & Auditor General of India',
+    initials: 'RS',
+  },
+  {
+    email: 'demo@govwatch.gov.in',
+    password: 'Demo@1234',
+    name: 'Demo User',
+    role: 'State Audit Officer',
+    employeeId: 'SAO-DL-001',
+    department: 'State Finance Department',
+    initials: 'DU',
+  },
+  {
+    email: 'collector.sindhudurg@nic.in',
+    password: 'Collector@2026',
+    name: 'Sunil Patkar (IAS)',
+    role: 'District Collector',
+    employeeId: 'DC-MH-033',
+    department: 'District Administration, Sindhudurg',
+    initials: 'SP',
+  },
+  {
+    email: 'municipal.officer@nic.in',
+    password: 'Municipal@2026',
+    name: 'Amit Deshmukh',
+    role: 'Municipal Officer',
+    employeeId: 'MO-MH-402',
+    department: 'Malvan Municipal Council',
+    initials: 'AD',
+  },
+];
+
+export function AuthProvider({ children }) {
+  const [user, setUser] = useState(() => {
+    try {
+      const stored = localStorage.getItem('gw_user');
+      return stored ? JSON.parse(stored) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const login = useCallback(async (email, password) => {
+    // Simulate network delay
+    await new Promise((r) => setTimeout(r, 1200));
+
+    const found = MOCK_USERS.find(
+      (u) => u.email.toLowerCase() === email.toLowerCase() && u.password === password
+    );
+
+    if (!found) {
+      throw new Error('Invalid credentials. Please check your email and password.');
+    }
+
+    const sessionUser = {
+      email: found.email,
+      name: found.name,
+      role: found.role,
+      employeeId: found.employeeId,
+      department: found.department,
+      initials: found.initials,
+    };
+
+    localStorage.setItem('gw_user', JSON.stringify(sessionUser));
+    setUser(sessionUser);
+    return sessionUser;
+  }, []);
+
+  const signup = useCallback(async (formData) => {
+    await new Promise((r) => setTimeout(r, 1400));
+    // In a real app this would POST to an API
+    const newUser = {
+      email: formData.email,
+      name: formData.fullName,
+      role: formData.role,
+      employeeId: formData.employeeId,
+      department: formData.department,
+      initials: formData.fullName
+        .split(' ')
+        .slice(0, 2)
+        .map((n) => n[0])
+        .join('')
+        .toUpperCase(),
+    };
+    localStorage.setItem('gw_user', JSON.stringify(newUser));
+    setUser(newUser);
+    return newUser;
+  }, []);
+
+  const logout = useCallback(() => {
+    localStorage.removeItem('gw_user');
+    setUser(null);
+  }, []);
+
+  return (
+    <AuthContext.Provider value={{ user, login, signup, logout }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export function useAuth() {
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
+  return ctx;
+}
