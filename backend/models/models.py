@@ -16,6 +16,7 @@ class Project(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     project_name = Column(String)
+    scheme = Column(String)      # <-- Add this line
     budget = Column(Float)
     district = Column(String)
     state = Column(String)
