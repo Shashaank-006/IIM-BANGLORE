@@ -1,19 +1,14 @@
 import { useState } from 'react';
 import { Bell, Settings, HelpCircle, CheckCircle2, AlertTriangle, Info, BookOpen, FileText, Phone } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useProjects } from '../../context/ProjectContext';
 
 // ─────────────── NOTIFICATIONS PAGE ───────────────
 export function Notifications() {
-  const [notifications, setNotifications] = useState([
-    { id: 1, type: 'alert', title: 'AI Anomaly Flagged — Warangal Water Supply', desc: 'Neural inspection detected pipe diameter deviation at site W18. Confidence: 92%.', time: '2 hours ago', read: false },
-    { id: 2, type: 'action', title: 'Audit Assignment — Kangra Smart City', desc: 'You have been assigned the Kangra Command Centre audit. Due date: 20 Aug 2026.', time: '5 hours ago', read: false },
-    { id: 3, type: 'info', title: 'Budget Released — Chhattisgarh PMGSY', desc: '₹2.3 Cr disbursed to Kawardha-Chilfi road project. PFMS transaction ref: TXN-CHH-382.', time: '1 day ago', read: true },
-    { id: 4, type: 'info', title: 'Contractor Compliance Report Updated', desc: 'Ganesh Infra Works compliance score updated to 74/100. GST verification pending.', time: '2 days ago', read: true },
-    { id: 5, type: 'alert', title: 'Field Report Overdue — Bastar Connectivity', desc: 'Inspection report for Bastar village road has not been submitted. 14 days overdue.', time: '3 days ago', read: true },
-  ]);
+  const { notifications, unreadCount, markNotificationRead, markAllNotificationsRead } = useProjects();
 
-  const markRead = (id) => setNotifications(notifications.map(n => n.id === id ? { ...n, read: true } : n));
-  const markAll = () => setNotifications(notifications.map(n => ({ ...n, read: true })));
+  const markRead = (id) => markNotificationRead(id);
+  const markAll = () => markAllNotificationsRead();
 
   const typeIcon = (type) => {
     if (type === 'alert') return <AlertTriangle size={14} style={{ color: 'var(--accent-red)' }} />;
@@ -26,8 +21,6 @@ export function Notifications() {
     if (type === 'action') return 'var(--accent-amber-dim)';
     return 'var(--accent-blue-dim)';
   };
-
-  const unreadCount = notifications.filter(n => !n.read).length;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24, maxWidth: 720 }}>

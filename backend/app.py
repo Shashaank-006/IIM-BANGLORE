@@ -1,43 +1,30 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-<<<<<<< HEAD
 from databases.database import engine
 from models.models import Base
 
 from routers.auth import router as auth_router
 from routers.project_router import router as project_router
-
+from routers.verification import router as verification_router
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
 
-
-=======
-from databases.database import engine 
-from models.models import Base
-
-Base.metadata.create_all(bind=engine)
->>>>>>> aad4629d930ea743735a0daeea82cf8b05dfd907
 app = FastAPI(
     title="Bhoot Nirman API",
     description="Backend API for AI Infrastructure Verification",
     version="1.0.0"
 )
 
-<<<<<<< HEAD
-
-=======
->>>>>>> aad4629d930ea743735a0daeea82cf8b05dfd907
 # Allow React frontend to connect
 origins = [
     "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:5174",
+    "http://127.0.0.1:5174",
 ]
 
-<<<<<<< HEAD
-
-=======
->>>>>>> aad4629d930ea743735a0daeea82cf8b05dfd907
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -46,27 +33,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-<<<<<<< HEAD
 # Register Routers
-app.include_router(auth_router)
-app.include_router(project_router)
+app.include_router(auth_router, prefix="/api/auth", tags=["auth"])
+app.include_router(project_router, prefix="/api", tags=["projects"])
+app.include_router(verification_router, prefix="/api/verification", tags=["verification"])
 
-
-
-=======
->>>>>>> aad4629d930ea743735a0daeea82cf8b05dfd907
 @app.get("/")
 def home():
     return {
         "message": "Welcome to Bhoot Nirman Backend 🚀"
     }
 
-
-<<<<<<< HEAD
-
-=======
->>>>>>> aad4629d930ea743735a0daeea82cf8b05dfd907
 @app.get("/health")
 def health():
     return {

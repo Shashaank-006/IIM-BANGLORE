@@ -8,14 +8,33 @@ import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, 
   Tooltip, CartesianGrid, Legend 
 } from 'recharts';
-import { budgetData } from '../../data/mockData';
+import { useProjects } from '../../context/ProjectContext';
 
 const formatINR = (value) => {
+  if (value === undefined || value === null || isNaN(value)) return '₹0.00';
   if (value >= 10000000) return `₹${(value / 10000000).toFixed(2)} Cr`;
   return `₹${(value / 100000).toFixed(1)} L`;
 };
 
 export default function Budget({ searchQuery }) {
+  const { budgetData } = useProjects();
+
+  if (!budgetData) {
+    return (
+      <div className="card p-8 text-center" style={{ color: 'var(--text-muted)' }}>
+        Loading financial pipeline transmission data...
+      </div>
+    );
+  }
+
+  const totalWithholds = (budgetData.pendingReimbursements || [])
+    .filter(r => r.status === 'Withheld')
+    .reduce((sum, r) => sum + r.amount, 0);
+
+  const totalDisputed = (budgetData.pendingReimbursements || [])
+    .filter(r => r.status === 'Disputed')
+    .reduce((sum, r) => sum + r.amount, 0);
+
   // Filter pending reimbursements based on search query
   const filteredReimbursements = budgetData.pendingReimbursements.filter(r => 
     r.project.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -167,11 +186,11 @@ export default function Budget({ searchQuery }) {
             <div className="divider" />
             <div className="flex justify-between items-center" style={{ fontSize: '0.85rem' }}>
               <span style={{ color: 'var(--text-secondary)' }}>Total Audit Withholds</span>
-              <span style={{ fontWeight: 600, color: 'var(--accent-red)' }}>₹2.80 Cr</span>
+              <span style={{ fontWeight: 600, color: 'var(--accent-red)' }}>{formatINR(totalWithholds)}</span>
             </div>
             <div className="flex justify-between items-center" style={{ fontSize: '0.85rem' }}>
               <span style={{ color: 'var(--text-secondary)' }}>Disputed Claims Float</span>
-              <span style={{ fontWeight: 600, color: 'var(--accent-amber)' }}>₹3.50 Cr</span>
+              <span style={{ fontWeight: 600, color: 'var(--accent-amber)' }}>{formatINR(totalDisputed)}</span>
             </div>
           </div>
           <div className="p-3 mt-4" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }}>

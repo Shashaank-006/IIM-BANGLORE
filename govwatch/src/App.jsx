@@ -47,6 +47,9 @@ import {
 import {
   ProjectUpdates, UploadCompletionReport, UploadGeotaggedImages, RespondToAIFindings
 } from './components/pages/role-pages/MunicipalOfficerPages';
+import ProjectRegistration from './components/pages/role-pages/ProjectRegistration';
+import ProjectSuccess from './components/pages/role-pages/ProjectSuccess';
+import DigitalPassport from './components/pages/role-pages/DigitalPassport';
 
 // General shared pages
 import { Notifications, SettingsPage, HelpDocs } from './components/pages/GeneralPages';
@@ -136,6 +139,9 @@ export default function App() {
                 <Route path="/dc/inspection-reports"   element={<InspectionReports />} />
 
                 {/* Municipal Officer */}
+                <Route path="/mo/register-project"  element={<ProjectRegistration />} />
+                <Route path="/mo/project-success/:projectId" element={<ProjectSuccess />} />
+                <Route path="/mo/digital-passport/:projectId" element={<DigitalPassport />} />
                 <Route path="/mo/project-updates"    element={<ProjectUpdates />} />
                 <Route path="/mo/upload-completion"  element={<UploadCompletionReport />} />
                 <Route path="/mo/upload-images"      element={<UploadGeotaggedImages />} />

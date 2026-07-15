@@ -4,7 +4,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { MapPin, ShieldAlert, Coins, HelpCircle, HardHat, User, Landmark } from 'lucide-react';
-import { projects } from '../../data/mockData';
+import { useProjects } from '../../context/ProjectContext';
 
 const formatINR = (value) => {
   if (value >= 10000000) return `₹${(value / 10000000).toFixed(2)} Cr`;
@@ -69,12 +69,13 @@ if (typeof document !== 'undefined') {
 }
 
 export default function MapView({ searchQuery }) {
-  const [activeProject, setActiveProject] = useState(projects[0]);
+  const { allProjects } = useProjects();
+  const [activeProject, setActiveProject] = useState(allProjects[0]);
   const [mapCenter, setMapCenter] = useState([20.5937, 78.9629]); // Geographic center of India
   const [mapZoom, setMapZoom] = useState(5);
 
   // Filter projects based on search query
-  const filtered = projects.filter(p => 
+  const filtered = allProjects.filter(p => 
     p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     p.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
     p.district.toLowerCase().includes(searchQuery.toLowerCase()) ||

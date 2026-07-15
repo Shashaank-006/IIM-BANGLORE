@@ -1,33 +1,37 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Building2, Users, Cpu, UserPlus, CheckCircle2, 
   AlertTriangle, ArrowUpRight, Search, ShieldCheck, 
-  Sliders, Save, RefreshCw, Trash2, Edit2, ShieldAlert
+  Sliders, Save, RefreshCw, Trash2, Edit2, ShieldAlert, X
 } from 'lucide-react';
-import { projects } from '../../../data/mockData';
+import { api } from '../../../services/api';
 
-// Mock state comparison data
-const stateData = [
-  { state: 'Chhattisgarh', projectsCount: 2, totalBudget: 8220000, spent: 5830000, completion: 73, risk: 'Low' },
-  { state: 'Telangana', projectsCount: 1, totalBudget: 12600000, spent: 5100000, completion: 34, risk: 'High' },
-  { state: 'West Bengal', projectsCount: 1, totalBudget: 8900000, spent: 8750000, completion: 100, risk: 'Low' },
-  { state: 'Maharashtra', projectsCount: 2, totalBudget: 12800000, spent: 3900000, completion: 31, risk: 'Medium' },
-  { state: 'Himachal Pradesh', projectsCount: 1, totalBudget: 18500000, spent: 6200000, completion: 33, risk: 'High' },
-  { state: 'Karnataka', projectsCount: 1, totalBudget: 9800000, spent: 9640000, completion: 100, risk: 'Low' }
-];
+const formatINR = (value) => {
+  if (value === undefined || value === null || isNaN(value)) return '₹0.00';
+  if (value >= 10000000) return `₹${(value / 10000000).toFixed(2)} Cr`;
+  return `₹${(value / 100000).toFixed(1)} L`;
+};
 
-// Mock User Directory
-const initialUsers = [
-  { id: 'USR-045', name: 'Ranjit Kumar Sahu', email: 'ranjit.sahu@cag.gov.in', role: 'CAG Auditor', dept: 'Comptroller & Auditor General', status: 'Active' },
-  { id: 'USR-012', name: 'Priya Nair', email: 'priya.nair@nic.in', role: 'Joint Secretary', dept: 'Ministry of Rural Development', status: 'Active' },
-  { id: 'USR-078', name: 'Archana Deshpande', email: 'archana.d@nic.in', role: 'State Audit Officer', dept: 'Finance Department, WB', status: 'Active' },
-  { id: 'USR-033', name: 'Sunil Patkar (IAS)', email: 'collector.sindhudurg@nic.in', role: 'District Collector', dept: 'Sindhudurg Admin', status: 'Active' },
-  { id: 'USR-102', name: 'Amit Deshmukh', email: 'municipal.officer@nic.in', role: 'Municipal Officer', dept: 'Malvan Council', status: 'Active' }
-];
-
+// ─── STATE COMPARISON ──────────────────────────────────────────────────────────
 export function StateComparison() {
   const [searchTerm, setSearchTerm] = useState('');
+  const [stateData, setStateData] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const data = await api.dashboard.getStateComparison();
+        setStateData(data);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadData();
+  }, []);
 
   const filtered = stateData.filter(s => 
     s.state.toLowerCase().includes(searchTerm.toLowerCase())
@@ -55,52 +59,114 @@ export function StateComparison() {
           </div>
         </div>
 
-        <div className="table-wrapper">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>State Name</th>
-                <th>Active Projects</th>
-                <th>Total Sanctioned</th>
-                <th>Total Spent</th>
-                <th>Avg. Completion</th>
-                <th>State Risk Index</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((s, idx) => (
-                <tr key={idx}>
-                  <td style={{ fontWeight: 600 }}>{s.state}</td>
-                  <td>{s.projectsCount} Projects</td>
-                  <td style={{ fontWeight: 650 }}>₹{(s.totalBudget / 10000000).toFixed(2)} Cr</td>
-                  <td>₹{(s.spent / 10000000).toFixed(2)} Cr</td>
-                  <td>
-                    <div className="flex items-center gap-2">
-                      <div className="progress-bar-track" style={{ flex: 1, minWidth: '80px' }}>
-                        <div className="progress-bar-fill" style={{ width: `${s.completion}%`, backgroundColor: s.completion === 100 ? 'var(--accent-green)' : 'var(--accent-blue)' }} />
-                      </div>
-                      <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>{s.completion}%</span>
-                    </div>
-                  </td>
-                  <td>
-                    <span className="badge" style={{ backgroundColor: s.risk === 'High' ? 'var(--accent-red-dim)' : s.risk === 'Medium' ? 'var(--accent-amber-dim)' : 'var(--accent-green-dim)', color: s.risk === 'High' ? 'var(--accent-red)' : s.risk === 'Medium' ? 'var(--accent-amber)' : 'var(--accent-green)' }}>
-                      <span className={`dot ${s.risk === 'High' ? 'dot-red' : s.risk === 'Medium' ? 'dot-amber' : 'dot-green'}`} />
-                      {s.risk}
-                    </span>
-                  </td>
+        {loading ? (
+          <div style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '30px' }}>Loading comparison...</div>
+        ) : (
+          <div className="table-wrapper">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>State Name</th>
+                  <th>Active Projects</th>
+                  <th>Total Sanctioned</th>
+                  <th>Total Spent</th>
+                  <th>Avg. Completion</th>
+                  <th>State Risk Index</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {filtered.map((s, idx) => (
+                  <tr key={idx}>
+                    <td style={{ fontWeight: 600 }}>{s.state}</td>
+                    <td>{s.projectsCount} Projects</td>
+                    <td style={{ fontWeight: 650 }}>{formatINR(s.totalBudget)}</td>
+                    <td>{formatINR(s.spent)}</td>
+                    <td>
+                      <div className="flex items-center gap-2">
+                        <div className="progress-bar-track" style={{ flex: 1, minWidth: '80px' }}>
+                          <div className="progress-bar-fill" style={{ width: `${s.completion}%`, backgroundColor: s.completion === 100 ? 'var(--accent-green)' : 'var(--accent-blue)' }} />
+                        </div>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>{s.completion}%</span>
+                      </div>
+                    </td>
+                    <td>
+                      <span className="badge" style={{ backgroundColor: s.risk === 'High' ? 'var(--accent-red-dim)' : s.risk === 'Medium' ? 'var(--accent-amber-dim)' : 'var(--accent-green-dim)', color: s.risk === 'High' ? 'var(--accent-red)' : s.risk === 'Medium' ? 'var(--accent-amber)' : 'var(--accent-green)' }}>
+                        <span className={`dot ${s.risk === 'High' ? 'dot-red' : s.risk === 'Medium' ? 'dot-amber' : 'dot-green'}`} />
+                        {s.risk}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+                {filtered.length === 0 && (
+                  <tr>
+                    <td colSpan={6} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '20px 0' }}>No states found.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
+// ─── USER MANAGEMENT ───────────────────────────────────────────────────────────
 export function UserManagement() {
-  const [users, setUsers] = useState(initialUsers);
+  const [users, setUsers] = useState([]);
   const [search, setSearch] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [isAdding, setIsAdding] = useState(false);
+  const [form, setForm] = useState({ name: '', email: '', role: 'CAG Auditor', dept: '' });
+  const [successMsg, setSuccessMsg] = useState('');
+
+  const loadUsers = async () => {
+    try {
+      const data = await api.users.getAll();
+      setUsers(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadUsers();
+  }, []);
+
+  const handleAddUser = async (e) => {
+    e.preventDefault();
+    if (!form.name || !form.email || !form.dept) return;
+
+    try {
+      await api.users.create({
+        name: form.name,
+        email: form.email,
+        role: form.role,
+        dept: form.dept
+      });
+      setSuccessMsg("Account created successfully!");
+      setForm({ name: '', email: '', role: 'CAG Auditor', dept: '' });
+      setIsAdding(false);
+      loadUsers();
+      setTimeout(() => setSuccessMsg(''), 3000);
+    } catch (err) {
+      alert(err.message || "Failed to create user account.");
+    }
+  };
+
+  const handleDeleteUser = async (userId) => {
+    if (!confirm("Are you sure you want to deactivate this official account?")) return;
+    try {
+      await api.users.delete(userId);
+      setSuccessMsg("Account deactivated.");
+      loadUsers();
+      setTimeout(() => setSuccessMsg(''), 3000);
+    } catch (err) {
+      alert(err.message || "Failed to delete account.");
+    }
+  };
 
   const filtered = users.filter(u => 
     u.name.toLowerCase().includes(search.toLowerCase()) || 
@@ -109,6 +175,46 @@ export function UserManagement() {
 
   return (
     <div className="flex flex-col gap-6">
+      {successMsg && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--accent-green-dim)', border: '1px solid rgba(16,185,129,0.25)', borderRadius: 'var(--radius-sm)', padding: '10px 14px' }}>
+          <CheckCircle2 size={14} style={{ color: 'var(--accent-green)' }} />
+          <span style={{ fontSize: '0.8rem', color: 'var(--accent-green)', fontWeight: 500 }}>{successMsg}</span>
+        </div>
+      )}
+
+      {isAdding && (
+        <div className="card" style={{ maxWidth: 500 }}>
+          <div className="flex justify-between items-center mb-3">
+            <h3 className="section-title">Add Official Account</h3>
+            <button className="btn-icon" onClick={() => setIsAdding(false)}><X size={15} /></button>
+          </div>
+          <form onSubmit={handleAddUser} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <label style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>Full Name</label>
+              <input value={form.name} onChange={e => setForm({...form, name: e.target.value})} placeholder="e.g. Vandana Mehta" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '6px 10px', fontSize: '0.8rem', color: 'var(--text-primary)', outline: 'none' }} required />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <label style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>Email Address</label>
+              <input type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} placeholder="e.g. vandana.m@nic.in" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '6px 10px', fontSize: '0.8rem', color: 'var(--text-primary)', outline: 'none' }} required />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <label style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>Role Designation</label>
+              <select value={form.role} onChange={e => setForm({...form, role: e.target.value})} style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '6px 10px', fontSize: '0.8rem', color: 'var(--text-primary)', outline: 'none' }}>
+                <option value="CAG Auditor">CAG Auditor</option>
+                <option value="State Audit Officer">State Audit Officer</option>
+                <option value="District Collector">District Collector</option>
+                <option value="Municipal Officer">Municipal Officer</option>
+              </select>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <label style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>Department</label>
+              <input value={form.dept} onChange={e => setForm({...form, dept: e.target.value})} placeholder="e.g. State Finance Division" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '6px 10px', fontSize: '0.8rem', color: 'var(--text-primary)', outline: 'none' }} required />
+            </div>
+            <button type="submit" className="btn btn-primary" style={{ alignSelf: 'flex-start', marginTop: 6 }}>Create Account</button>
+          </form>
+        </div>
+      )}
+
       <div className="card">
         <div className="flex justify-between items-center flex-wrap gap-4 mb-4">
           <div>
@@ -126,56 +232,62 @@ export function UserManagement() {
                 placeholder="Search user..."
               />
             </div>
-            <button className="btn btn-primary">
+            <button className="btn btn-primary" onClick={() => setIsAdding(true)}>
               <UserPlus size={14} />
               Add User
             </button>
           </div>
         </div>
 
-        <div className="table-wrapper">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>User ID</th>
-                <th>Name</th>
-                <th>Email Address</th>
-                <th>Designated Role</th>
-                <th>Department</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((u, idx) => (
-                <tr key={idx}>
-                  <td style={{ fontFamily: 'monospace', color: 'var(--text-muted)' }}>{u.id}</td>
-                  <td style={{ fontWeight: 600 }}>{u.name}</td>
-                  <td>{u.email}</td>
-                  <td style={{ color: 'var(--accent-blue)', fontWeight: 500 }}>{u.role}</td>
-                  <td style={{ color: 'var(--text-secondary)' }}>{u.dept}</td>
-                  <td>
-                    <span className="badge badge-green">
-                      <span className="dot dot-green" />
-                      {u.status}
-                    </span>
-                  </td>
-                  <td>
-                    <div className="flex gap-2">
-                      <button className="btn-icon" style={{ padding: '4px' }} title="Edit user"><Edit2 size={12} /></button>
-                      <button className="btn-icon" style={{ padding: '4px', color: 'var(--accent-red)' }} title="Deactivate user"><Trash2 size={12} /></button>
-                    </div>
-                  </td>
+        {loading ? (
+          <div style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '30px' }}>Loading directory...</div>
+        ) : (
+          <div className="table-wrapper">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>User ID</th>
+                  <th>Name</th>
+                  <th>Email Address</th>
+                  <th>Designated Role</th>
+                  <th>Department</th>
+                  <th>Status</th>
+                  <th>Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {filtered.map((u, idx) => (
+                  <tr key={idx}>
+                    <td style={{ fontFamily: 'monospace', color: 'var(--text-muted)' }}>{u.id}</td>
+                    <td style={{ fontWeight: 600 }}>{u.name}</td>
+                    <td>{u.email}</td>
+                    <td style={{ color: 'var(--accent-blue)', fontWeight: 500 }}>{u.role}</td>
+                    <td style={{ color: 'var(--text-secondary)' }}>{u.dept}</td>
+                    <td>
+                      <span className="badge badge-green">
+                        <span className="dot dot-green" />
+                        {u.status}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="flex gap-2">
+                        {u.role !== 'Joint Secretary, Ministry of Rural Development' && (
+                          <button className="btn-icon" onClick={() => handleDeleteUser(u.id)} style={{ padding: '4px', color: 'var(--accent-red)' }} title="Deactivate user"><Trash2 size={12} /></button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
+// ─── AI CONFIGURATION ──────────────────────────────────────────────────────────
 export function AIConfiguration() {
   const [engineParams, setEngineParams] = useState({
     satelliteConfidence: 85,
@@ -184,11 +296,35 @@ export function AIConfiguration() {
     contractorRiskThreshold: 70
   });
   const [saved, setSaved] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  const handleSave = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+  useEffect(() => {
+    async function loadConfig() {
+      try {
+        const config = await api.aiConfig.get();
+        setEngineParams(config);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadConfig();
+  }, []);
+
+  const handleSave = async () => {
+    try {
+      await api.aiConfig.save(engineParams);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (err) {
+      alert("Failed to save thresholds configuration.");
+    }
   };
+
+  if (loading) {
+    return <div className="card p-8 text-center" style={{ color: 'var(--text-muted)' }}>Loading model parameters...</div>;
+  }
 
   return (
     <div className="grid-2">
@@ -282,8 +418,8 @@ export function AIConfiguration() {
             <span style={{ fontWeight: 600, color: 'var(--accent-green)' }}>0.942</span>
           </div>
           <div className="flex justify-between items-center p-3" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)' }}>
-            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Total Anomalies Flagged FY 25</span>
-            <span style={{ fontWeight: 600, color: 'var(--accent-amber)' }}>18 Anomalies</span>
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Model Deployment State</span>
+            <span style={{ fontWeight: 600, color: 'var(--accent-blue)' }}>Sentinel Production</span>
           </div>
         </div>
       </div>
@@ -291,16 +427,33 @@ export function AIConfiguration() {
   );
 }
 
+// ─── AUDIT ASSIGNMENTS ──────────────────────────────────────────────────────────
 export function AuditAssignments() {
-  const [tasks, setTasks] = useState([
-    { id: 'AUD-382', project: 'Warangal Urban Water Supply', state: 'Telangana', risk: 'High', assigned: 'Unassigned', dueDate: '2026-08-15' },
-    { id: 'AUD-104', project: 'Kangra Smart City Centre', state: 'Himachal Pradesh', risk: 'High', assigned: 'Unassigned', dueDate: '2026-08-20' },
-    { id: 'AUD-903', project: 'Sindhudurg Coastal Widening', state: 'Maharashtra', risk: 'Medium', assigned: 'Ranjit Kumar Sahu', dueDate: '2026-09-01' }
-  ]);
-  const [auditor, setAuditor] = useState('');
+  const [tasks, setTasks] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const assignAuditor = (taskId, name) => {
-    setTasks(tasks.map(t => t.id === taskId ? { ...t, assigned: name } : t));
+  const loadTasks = async () => {
+    try {
+      const data = await api.audit.getAssignments();
+      setTasks(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadTasks();
+  }, []);
+
+  const assignAuditor = async (taskId, name) => {
+    try {
+      await api.audit.assign(taskId, name);
+      loadTasks();
+    } catch (err) {
+      alert("Failed to assign auditor.");
+    }
   };
 
   return (
@@ -309,54 +462,59 @@ export function AuditAssignments() {
         <span className="label">Task Desk</span>
         <h3 className="section-title mt-1 mb-4">Audit Assignment Queue</h3>
 
-        <div className="table-wrapper">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Audit ID</th>
-                <th>Project Reference</th>
-                <th>State Domain</th>
-                <th>Anomalies Level</th>
-                <th>Due Date</th>
-                <th>Assigned Auditor</th>
-                <th>Reassign Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {tasks.map((t, idx) => (
-                <tr key={idx}>
-                  <td style={{ fontFamily: 'monospace' }}>{t.id}</td>
-                  <td style={{ fontWeight: 600 }}>{t.project}</td>
-                  <td style={{ color: 'var(--text-secondary)' }}>{t.state}</td>
-                  <td>
-                    <span className="badge" style={{ backgroundColor: t.risk === 'High' ? 'var(--accent-red-dim)' : 'var(--accent-amber-dim)', color: t.risk === 'High' ? 'var(--accent-red)' : 'var(--accent-amber)' }}>
-                      {t.risk} Risk
-                    </span>
-                  </td>
-                  <td>{t.dueDate}</td>
-                  <td style={{ fontWeight: 550, color: t.assigned === 'Unassigned' ? 'var(--accent-amber)' : 'var(--accent-green)' }}>
-                    {t.assigned}
-                  </td>
-                  <td>
-                    <div className="flex items-center gap-2">
-                      <select 
-                        className="select" 
-                        style={{ padding: '4px 28px 4px 10px', fontSize: '0.74rem' }}
-                        onChange={(e) => assignAuditor(t.id, e.target.value)}
-                        value={t.assigned}
-                      >
-                        <option value="Unassigned">Assign Auditor...</option>
-                        <option value="Ranjit Kumar Sahu">Ranjit Kumar Sahu</option>
-                        <option value="Archana Deshpande">Archana Deshpande</option>
-                        <option value="Sunil Patkar (IAS)">Sunil Patkar (IAS)</option>
-                      </select>
-                    </div>
-                  </td>
+        {loading ? (
+          <div style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '30px' }}>Loading queue...</div>
+        ) : (
+          <div className="table-wrapper">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Audit ID</th>
+                  <th>Project Reference</th>
+                  <th>State Domain</th>
+                  <th>Anomalies Level</th>
+                  <th>Due Date</th>
+                  <th>Assigned Auditor</th>
+                  <th>Reassign Action</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {tasks.map((t, idx) => (
+                  <tr key={idx}>
+                    <td style={{ fontFamily: 'monospace' }}>{t.task_id}</td>
+                    <td style={{ fontWeight: 600 }}>{t.project_name}</td>
+                    <td style={{ color: 'var(--text-secondary)' }}>{t.state}</td>
+                    <td>
+                      <span className="badge" style={{ backgroundColor: t.risk === 'High' ? 'var(--accent-red-dim)' : 'var(--accent-amber-dim)', color: t.risk === 'High' ? 'var(--accent-red)' : 'var(--accent-amber)' }}>
+                        {t.risk} Risk
+                      </span>
+                    </td>
+                    <td>{t.due_date}</td>
+                    <td style={{ fontWeight: 550, color: t.assigned === 'Unassigned' ? 'var(--accent-amber)' : 'var(--accent-green)' }}>
+                      {t.assigned}
+                    </td>
+                    <td>
+                      <div className="flex items-center gap-2">
+                        <select 
+                          className="select" 
+                          style={{ padding: '4px 28px 4px 10px', fontSize: '0.74rem' }}
+                          onChange={(e) => assignAuditor(t.task_id, e.target.value)}
+                          value={t.assigned}
+                        >
+                          <option value="Unassigned">Assign Auditor...</option>
+                          <option value="Ranjit Kumar Sahu">Ranjit Kumar Sahu</option>
+                          <option value="Archana Deshpande">Archana Deshpande</option>
+                          <option value="Sunil Patkar (IAS)">Sunil Patkar (IAS)</option>
+                          <option value="Demo User">Demo User</option>
+                        </select>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );

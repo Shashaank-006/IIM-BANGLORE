@@ -8,28 +8,11 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import styles from './Auth.module.css';
 
-const ROLES = [
-  'Joint Secretary, Ministry of Rural Development',
-  'CAG Auditor',
-  'State Audit Officer',
-  'District Collector',
-  'Municipal Officer',
-];
-
-// Demo accounts for evaluation
-const DEMO_ACCOUNTS = [
-  { role: 'Joint Secretary', email: 'priya.nair@nic.in', password: 'GovWatch@2026' },
-  { role: 'CAG Auditor', email: 'ranjit.sahu@cag.gov.in', password: 'Audit@2026' },
-  { role: 'State Audit Officer', email: 'demo@govwatch.gov.in', password: 'Demo@1234' },
-  { role: 'District Collector', email: 'collector.sindhudurg@nic.in', password: 'Collector@2026' },
-  { role: 'Municipal Officer', email: 'municipal.officer@nic.in', password: 'Municipal@2026' },
-];
-
 export default function Login() {
   const navigate = useNavigate();
   const { login } = useAuth();
 
-  const [form, setForm] = useState({ email: '', password: '', role: '', rememberMe: false });
+  const [form, setForm] = useState({ email: '', password: '', rememberMe: false });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -125,35 +108,6 @@ export default function Login() {
             </p>
           </div>
 
-          {/* Demo hint panel */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '12px' }}>
-            <span style={{ fontSize: '0.68rem', fontWeight: 600, color: 'var(--accent-blue)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Quick Demo Login</span>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-              {DEMO_ACCOUNTS.map((acc) => (
-                <button
-                  key={acc.role}
-                  type="button"
-                  onClick={() => {
-                    setForm((f) => ({ ...f, email: acc.email, password: acc.password, role: acc.role }));
-                    setError('');
-                  }}
-                  style={{
-                    padding: '4px 8px',
-                    fontSize: '0.72rem',
-                    background: 'var(--bg-surface)',
-                    border: '1px solid var(--border)',
-                    borderRadius: '4px',
-                    color: 'var(--text-secondary)',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease'
-                  }}
-                >
-                  {acc.role}
-                </button>
-              ))}
-            </div>
-          </div>
-
           {/* Error message */}
           {error && (
             <motion.div
@@ -223,29 +177,6 @@ export default function Login() {
               </div>
             </div>
 
-            {/* Role selector */}
-            <div className={styles.field}>
-              <label className={styles.fieldLabel} htmlFor="login-role">
-                Role <span className={styles.optional}>(optional)</span>
-              </label>
-              <div className={styles.selectWrap}>
-                <select
-                  id="login-role"
-                  name="role"
-                  value={form.role}
-                  onChange={handleChange}
-                  className={styles.select}
-                  disabled={loading}
-                >
-                  <option value="">Select your role</option>
-                  {ROLES.map((r) => (
-                    <option key={r} value={r}>{r}</option>
-                  ))}
-                </select>
-                <ChevronDown size={13} className={styles.selectIcon} />
-              </div>
-            </div>
-
             {/* Remember me */}
             <label className={styles.checkRow}>
               <input
@@ -291,6 +222,44 @@ export default function Login() {
             <Link to="/signup" className={styles.switchLink}>
               Create account →
             </Link>
+          </div>
+
+          <div style={{ borderTop: '1px dashed var(--border)', marginTop: '20px', paddingTop: '16px' }}>
+            <span className={styles.switchText} style={{ display: 'block', marginBottom: '10px', fontWeight: 600, fontSize: '0.76rem', color: 'var(--text-secondary)' }}>
+              Developer Quick Access Roles:
+            </span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {[
+                { label: 'Joint Secretary', email: 'priya.nair@nic.in', pass: 'GovWatch@2026' },
+                { label: 'CAG Auditor', email: 'ranjit.sahu@cag.gov.in', pass: 'Audit@2026' },
+                { label: 'State Audit Officer', email: 'demo@govwatch.gov.in', pass: 'Demo@1234' },
+                { label: 'District Collector', email: 'collector.sindhudurg@nic.in', pass: 'Collector@2026' },
+                { label: 'Municipal Officer', email: 'municipal.officer@nic.in', pass: 'Municipal@2026' },
+              ].map(role => (
+                <button
+                  key={role.label}
+                  type="button"
+                  className="btn btn-secondary"
+                  style={{ padding: '8px 10px', fontSize: '0.74rem', textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}
+                  onClick={async () => {
+                    setForm({ email: role.email, password: role.pass, rememberMe: false });
+                    setLoading(true);
+                    setError('');
+                    try {
+                      await login(role.email, role.pass);
+                      navigate('/', { replace: true });
+                    } catch (err) {
+                      setError(err.message);
+                    } finally {
+                      setLoading(false);
+                    }
+                  }}
+                >
+                  <span style={{ fontWeight: 600 }}>{role.label}</span>
+                  <span style={{ color: 'var(--text-muted)', fontSize: '0.68rem' }}>{role.email}</span>
+                </button>
+              ))}
+            </div>
           </div>
         </motion.div>
       </div>

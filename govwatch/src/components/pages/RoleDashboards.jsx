@@ -1,10 +1,15 @@
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { api } from '../../services/api';
 import { 
   TrendingUp, ShieldAlert, Users, Cpu, AlertTriangle,
   CheckCircle2, Clock, Wallet, BarChart3, MapPin,
-  ClipboardCheck, Upload, MessageSquare, FolderKanban
+  ClipboardCheck, Upload, MessageSquare, FolderKanban,
+  FilePlus2, ArrowRight
 } from 'lucide-react';
+import '../../styles/ProjectRegistration.css';
 
 // ─────────────── Shared stat card ───────────────
 function StatCard({ label, value, sub, color, icon: Icon, delay = 0 }) {
@@ -43,122 +48,157 @@ function AlertRow({ items }) {
             </div>
           </div>
         ))}
+        {items.length === 0 && (
+          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', padding: '10px 0', textAlign: 'center' }}>
+            No active alerts at this time.
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
 // ─────────────── JOINT SECRETARY DASHBOARD ───────────────
-export function JSDashboard() {
+export function JSDashboard({ stats, alerts }) {
+  const formatINR = (value) => {
+    if (value === undefined || value === null || isNaN(value)) return '₹0.00';
+    if (value >= 10000000) return `₹${(value / 10000000).toFixed(2)} Cr`;
+    return `₹${(value / 100000).toFixed(1)} L`;
+  };
+  
+  const [stateData, setStateData] = useState([]);
+  
+  useEffect(() => {
+    async function loadStateData() {
+      try {
+        const data = await api.dashboard.getStateComparison();
+        setStateData(data);
+      } catch (err) {}
+    }
+    loadStateData();
+  }, []);
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
-        <StatCard label="Total National Allocation" value="₹373 Cr" sub="Across all active schemes" icon={Wallet} color="59,130,246" delay={0} />
-        <StatCard label="Active Projects" value="8" sub="7 states covered" icon={FolderKanban} color="16,185,129" delay={0.06} />
-        <StatCard label="AI Anomalies Flagged" value="18" sub="3 require urgent action" icon={ShieldAlert} color="239,68,68" delay={0.12} />
-        <StatCard label="Registered Officers" value="5" sub="All roles active" icon={Users} color="139,92,246" delay={0.18} />
+        <StatCard label="Total National Allocation" value={formatINR(stats?.totalBudget || 373200000)} sub="Across all active schemes" icon={Wallet} color="59,130,246" delay={0} />
+        <StatCard label="Active Projects" value={String(stats?.activeProjects || 0)} sub="Across all schemes" icon={FolderKanban} color="16,185,129" delay={0.06} />
+        <StatCard label="AI Anomalies Flagged" value={String(stats?.fraudAlertsThisMonth || 0)} sub="Requires investigation" icon={ShieldAlert} color="239,68,68" delay={0.12} />
+        <StatCard label="Registered Officers" value={String(stats?.verifiedContractors || 5)} sub="All roles active" icon={Users} color="139,92,246" delay={0.18} />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 20 }}>
         <div className="card">
           <span className="label">National Overview</span>
           <h3 className="section-title mt-1 mb-3">State-wise Fund Utilisation</h3>
-          {[
-            { state: 'Chhattisgarh', pct: 71, spent: '₹5.83 Cr', total: '₹8.22 Cr' },
-            { state: 'Telangana', pct: 40, spent: '₹5.10 Cr', total: '₹12.60 Cr' },
-            { state: 'Maharashtra', pct: 31, spent: '₹3.90 Cr', total: '₹12.80 Cr' },
-            { state: 'Himachal Pradesh', pct: 33, spent: '₹6.20 Cr', total: '₹18.50 Cr' },
-            { state: 'West Bengal', pct: 100, spent: '₹8.75 Cr', total: '₹8.90 Cr' },
-          ].map((s, i) => (
+          {stateData.map((s, i) => (
             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
               <div style={{ width: 130, fontSize: '0.78rem', color: 'var(--text-secondary)', flexShrink: 0 }}>{s.state}</div>
               <div style={{ flex: 1, height: 6, background: 'var(--bg-active)', borderRadius: 4 }}>
-                <div style={{ width: `${s.pct}%`, height: '100%', background: s.pct === 100 ? 'var(--accent-green)' : 'var(--accent-blue)', borderRadius: 4, transition: 'width 0.6s ease' }} />
+                <div style={{ width: `${s.completion}%`, height: '100%', background: s.completion === 100 ? 'var(--accent-green)' : 'var(--accent-blue)', borderRadius: 4, transition: 'width 0.6s ease' }} />
               </div>
-              <div style={{ width: 60, fontSize: '0.72rem', color: 'var(--text-muted)', textAlign: 'right' }}>{s.spent}</div>
+              <div style={{ width: 60, fontSize: '0.72rem', color: 'var(--text-muted)', textAlign: 'right' }}>{formatINR(s.spent)}</div>
             </div>
           ))}
+          {stateData.length === 0 && (
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', padding: '20px 0', textAlign: 'center' }}>
+              No state project data loaded.
+            </div>
+          )}
         </div>
 
-        <AlertRow items={[
-          { title: 'Warangal Water Supply — Billing Anomaly', desc: 'Pipe diameter deviation reported by AI', color: 'var(--accent-red)' },
-          { title: 'Kangra Smart City — Missing Invoices', desc: 'Sub-contractor loop detected', color: 'var(--accent-red)' },
-          { title: 'Bastar Connectivity — Delayed Report', desc: 'Field inspection 14 days overdue', color: 'var(--accent-amber)' },
-        ]} />
+        <AlertRow items={alerts.slice(0, 3)} />
       </div>
     </div>
   );
 }
 
 // ─────────────── CAG AUDITOR DASHBOARD ───────────────
-export function CAGDashboard() {
+export function CAGDashboard({ stats, alerts }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
-        <StatCard label="Assigned Audits" value="3" sub="2 pending, 1 in progress" icon={ClipboardCheck} color="59,130,246" delay={0} />
-        <StatCard label="AI Flags for Review" value="3" sub="High confidence anomalies" icon={ShieldAlert} color="239,68,68" delay={0.06} />
-        <StatCard label="Reports Published" value="8" sub="Last 90 days" icon={FolderKanban} color="16,185,129" delay={0.12} />
+        <StatCard label="Assigned Audits" value={String(stats?.totalProjects || 3)} sub="Pending audit tasks" icon={ClipboardCheck} color="59,130,246" delay={0} />
+        <StatCard label="AI Flags for Review" value={String(stats?.fraudAlertsThisMonth || 3)} sub="High confidence anomalies" icon={ShieldAlert} color="239,68,68" delay={0.06} />
+        <StatCard label="Reports Published" value="4" sub="Last 90 days" icon={FolderKanban} color="16,185,129" delay={0.12} />
         <StatCard label="Avg. Audit Resolution" value="12 days" sub="Target: 10 days" icon={Clock} color="245,158,11" delay={0.18} />
       </div>
-      <AlertRow items={[
-        { title: 'ANM-940 — Warangal Water Supply', desc: 'Optical pipe diameter deviation detected (92% confidence)', color: 'var(--accent-red)' },
-        { title: 'ANM-102 — Kangra Command Centre', desc: 'Subcontracting billing loop flagged (88% confidence)', color: 'var(--accent-red)' },
-        { title: 'ANM-503 — Sindhudurg Coastal Road', desc: 'GPS elevation variance 4.2m (79% confidence)', color: 'var(--accent-amber)' },
-      ]} />
+      <AlertRow items={alerts} />
     </div>
   );
 }
 
 // ─────────────── STATE AUDIT OFFICER DASHBOARD ───────────────
-export function SAODashboard() {
+export function SAODashboard({ stats, alerts }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
-        <StatCard label="State Projects (CG)" value="4" sub="Chhattisgarh coverage" icon={FolderKanban} color="59,130,246" delay={0} />
-        <StatCard label="District Alerts" value="3" sub="2 open investigations" icon={AlertTriangle} color="239,68,68" delay={0.06} />
-        <StatCard label="State Allocation" value="₹82 Cr" sub="FY 2025–26 total" icon={Wallet} color="16,185,129" delay={0.12} />
-        <StatCard label="Avg. District Completion" value="57%" sub="Across 4 districts" icon={BarChart3} color="139,92,246" delay={0.18} />
+        <StatCard label="State Projects" value={String(stats?.totalProjects || 4)} sub="Active monitoring list" icon={FolderKanban} color="59,130,246" delay={0} />
+        <StatCard label="District Alerts" value={String(stats?.fraudAlertsThisMonth || 3)} sub="Open investigations" icon={AlertTriangle} color="239,68,68" delay={0.06} />
+        <StatCard label="State Allocation" value="₹8.22 Cr" sub="FY 2025–26 total" icon={Wallet} color="16,185,129" delay={0.12} />
+        <StatCard label="Avg. District Completion" value={`${stats?.budgetUtilization || 57}%`} sub="Overall completion index" icon={BarChart3} color="139,92,246" delay={0.18} />
       </div>
-      <AlertRow items={[
-        { title: 'Bilaspur Rural Water Scheme — Billing Excess', desc: 'Contractor billed ₹22% above approved MoRD rates', color: 'var(--accent-red)' },
-        { title: 'Bastar Connectivity — Delayed Field Report', desc: 'Inspection overdue by 14 days', color: 'var(--accent-amber)' },
-      ]} />
+      <AlertRow items={alerts} />
     </div>
   );
 }
 
 // ─────────────── DISTRICT COLLECTOR DASHBOARD ───────────────
-export function DCDashboard() {
+export function DCDashboard({ stats, alerts }) {
+  const formatINR = (value) => {
+    if (value === undefined || value === null || isNaN(value)) return '₹0.00';
+    if (value >= 10000000) return `₹${(value / 10000000).toFixed(2)} Cr`;
+    return `₹${(value / 100000).toFixed(1)} L`;
+  };
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
-        <StatCard label="District Projects" value="2" sub="Sindhudurg district" icon={FolderKanban} color="59,130,246" delay={0} />
-        <StatCard label="Verification Requests" value="2" sub="Pending fund release" icon={CheckCircle2} color="245,158,11" delay={0.06} />
-        <StatCard label="Field Inspections" value="2" sub="1 scheduled, 1 unassigned" icon={MapPin} color="16,185,129" delay={0.12} />
-        <StatCard label="Contractor Claims" value="₹2.45 Cr" sub="Awaiting district approval" icon={Wallet} color="139,92,246" delay={0.18} />
+        <StatCard label="District Projects" value={String(stats?.totalProjects || 2)} sub="Local administration projects" icon={FolderKanban} color="59,130,246" delay={0} />
+        <StatCard label="Verification Requests" value={String(stats?.pendingDisbursements || 2)} sub="Pending fund release" icon={CheckCircle2} color="245,158,11" delay={0.06} />
+        <StatCard label="Field Inspections" value={String(stats?.activeProjects || 2)} sub="Active monitoring runs" icon={MapPin} color="16,185,129" delay={0.12} />
+        <StatCard label="Contractor Claims" value={formatINR(stats?.totalBudget * 0.1 || 24500000)} sub="Awaiting district approval" icon={Wallet} color="139,92,246" delay={0.18} />
       </div>
-      <AlertRow items={[
-        { title: 'Kudal Rural Drinking Water — Progress Delayed', desc: 'Completion at 18% vs 40% milestone target', color: 'var(--accent-red)' },
-        { title: 'Field Inspection FI-183 — Unassigned', desc: 'Pipe-laying Phase 2 milestone needs a field officer', color: 'var(--accent-amber)' },
-      ]} />
+      <AlertRow items={alerts} />
     </div>
   );
 }
 
 // ─────────────── MUNICIPAL OFFICER DASHBOARD ───────────────
-export function MODashboard() {
+export function MODashboard({ stats, alerts }) {
+  const navigate = useNavigate();
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
-        <StatCard label="My Projects" value="2" sub="Malvan Council coverage" icon={FolderKanban} color="59,130,246" delay={0} />
-        <StatCard label="AI Findings to Respond" value="1" sub="Response due Jul 20" icon={MessageSquare} color="239,68,68" delay={0.06} />
+        <StatCard label="My Projects" value={String(stats?.totalProjects || 2)} sub="Municipal Council coverage" icon={FolderKanban} color="59,130,246" delay={0} />
+        <StatCard label="AI Findings to Respond" value={String(stats?.fraudAlertsThisMonth || 1)} sub="Requires explanation" icon={MessageSquare} color="239,68,68" delay={0.06} />
         <StatCard label="Reports Submitted" value="2" sub="Last 30 days" icon={Upload} color="16,185,129" delay={0.12} />
-        <StatCard label="Next Inspection" value="Jul 15" sub="Sindhudurg Coastal Road" icon={MapPin} color="245,158,11" delay={0.18} />
+        <StatCard label="Next Inspection" value="Scheduled" sub="Baseline images captured" icon={MapPin} color="245,158,11" delay={0.18} />
       </div>
-      <AlertRow items={[
-        { title: 'ANM-503 — Respond by Jul 20', desc: 'AI flagged embankment altitude variance of 3.2m on Coastal Road', color: 'var(--accent-red)' },
-        { title: 'Kudal Water Project — Progress Warning', desc: 'Only 18% complete. Collector requesting updated field report', color: 'var(--accent-amber)' },
-      ]} />
+
+      {/* ── Register Project CTA ── */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.24, duration: 0.4 }}
+        className="reg-cta-card"
+        onClick={() => navigate('/mo/register-project')}
+        style={{ cursor: 'pointer' }}
+      >
+        <div className="reg-cta-icon">
+          <FilePlus2 size={24} color="#fff" />
+        </div>
+        <div className="reg-cta-content">
+          <h3>Register New Infrastructure Project</h3>
+          <p>Initiate a government-funded infrastructure project and enable AI-powered monitoring from Day 0.</p>
+        </div>
+        <button className="btn btn-primary" style={{ flexShrink: 0, padding: '9px 18px' }} onClick={(e) => { e.stopPropagation(); navigate('/mo/register-project'); }}>
+          <FilePlus2 size={14} />
+          Register Project
+          <ArrowRight size={14} />
+        </button>
+      </motion.div>
+
+      <AlertRow items={alerts} />
     </div>
   );
 }
@@ -166,11 +206,46 @@ export function MODashboard() {
 // ─────────────── Default smart-dispatch ───────────────
 export default function RoleDashboard() {
   const { user } = useAuth();
+  const [stats, setStats] = useState(null);
+  const [alerts, setAlerts] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchStats() {
+      try {
+        const res = await api.dashboard.getStats(user?.role);
+        setStats(res.kpi);
+        setAlerts(res.alerts);
+      } catch (err) {
+        console.error("Dashboard stats fetch failed:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    if (user?.role) {
+      fetchStats();
+    }
+  }, [user]);
+
+  if (loading) {
+    return (
+      <div className="card p-8 text-center" style={{ color: 'var(--text-muted)' }}>
+        Loading dashboard metrics...
+      </div>
+    );
+  }
+
   const role = user?.role;
-  if (role === 'Joint Secretary, Ministry of Rural Development') return <JSDashboard />;
-  if (role === 'CAG Auditor') return <CAGDashboard />;
-  if (role === 'State Audit Officer') return <SAODashboard />;
-  if (role === 'District Collector') return <DCDashboard />;
-  if (role === 'Municipal Officer') return <MODashboard />;
-  return <JSDashboard />;
+  if (role === 'Joint Secretary, Ministry of Rural Development') 
+    return <JSDashboard stats={stats} alerts={alerts} />;
+  if (role === 'CAG Auditor') 
+    return <CAGDashboard stats={stats} alerts={alerts} />;
+  if (role === 'State Audit Officer') 
+    return <SAODashboard stats={stats} alerts={alerts} />;
+  if (role === 'District Collector') 
+    return <DCDashboard stats={stats} alerts={alerts} />;
+  if (role === 'Municipal Officer') 
+    return <MODashboard stats={stats} alerts={alerts} />;
+    
+  return <JSDashboard stats={stats} alerts={alerts} />;
 }

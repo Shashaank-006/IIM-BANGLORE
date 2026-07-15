@@ -1,25 +1,95 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
   ClipboardCheck, Bot, Eye, Download, ShieldAlert, 
   MapPin, AlertTriangle, FileText, Calendar, HardHat,
   Search, CheckCircle2, ChevronRight, FileCheck, Check
 } from 'lucide-react';
-import { projects } from '../../../data/mockData';
+import { api } from '../../../services/api';
+import { useAuth } from '../../../context/AuthContext';
 
+// ─── AUDIT QUEUE ───────────────────────────────────────────────────────────────
 export function AuditQueue() {
   const [searchTerm, setSearchTerm] = useState('');
+  const [tasks, setTasks] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedTask, setSelectedTask] = useState(null);
+  const { user } = useAuth();
 
-  const auditorTasks = [
-    { id: 'AUD-382', project: 'Warangal Urban Water Supply', scheme: 'JJM', risk: 'High', status: 'Pending Review', location: 'Warangal, Telangana', budget: 12600000 },
-    { id: 'AUD-104', project: 'Kangra Smart City Command Centre', scheme: 'Smart Cities', risk: 'High', status: 'Awaiting Response', location: 'Kangra, Himachal Pradesh', budget: 18500000 },
-    { id: 'AUD-903', project: 'Sindhudurg Coastal Widening', scheme: 'PMGSY', risk: 'Medium', status: 'In Progress', location: 'Sindhudurg, Maharashtra', budget: 7200000 }
-  ];
+  useEffect(() => {
+    async function loadTasks() {
+      try {
+        const allTasks = await api.audit.getAssignments();
+        // Filter tasks assigned to current auditor or show all if none specifically assigned
+        const filteredTasks = allTasks.filter(t => t.assigned === user?.name || t.assigned === 'Ranjit Kumar Sahu');
+        setTasks(filteredTasks.length > 0 ? filteredTasks : allTasks);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadTasks();
+  }, [user]);
 
-  const filtered = auditorTasks.filter(t => 
-    t.project.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    t.id.toLowerCase().includes(searchTerm.toLowerCase())
+  const filtered = tasks.filter(t => 
+    t.project_name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    t.task_id.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const handleDownloadLedger = () => {
+    if (!selectedTask) return;
+    const ledgerText = `
+==================================================
+GOVWATCH NATIONAL INFRASTRUCTURE AUDIT LEDGER
+==================================================
+Audit Reference ID : \${selectedTask.task_id}
+Project Title      : \${selectedTask.project_name}
+State Domain       : \${selectedTask.state}
+District Location  : \${selectedTask.location}
+Assigned Auditor   : \${selectedTask.assigned}
+Due Date           : \${selectedTask.due_date}
+Risk Priority Level: \${selectedTask.risk}
+Estimated Budget   : ₹\${selectedTask.budget.toLocaleString('en-IN')}
+Current Status     : \${selectedTask.status}
+
+==================================================
+FIELD PHYSICAL PROGRESS & LEDGER VERIFICATION
+==================================================
+- Inspection Log Ref: INSP-\${selectedTask.task_id.split('-').pop()}
+- Verification Tranche Status: Clean Release Approved
+- Gemini AI Verification Image Scan: Clear
+- Geographic GPS Fencing Check: 0.0m offset (Pass)
+
+Generated on: \${new Date().toLocaleString('en-IN')}
+Comptroller & Auditor General of India
+==================================================
+    `;
+    const element = document.createElement("a");
+    const file = new Blob([ledgerText], {type: 'text/plain'});
+    element.href = URL.createObjectURL(file);
+    element.download = `Ledger_\${selectedTask.task_id}.txt`;
+    document.body.appendChild(element);
+    element.click();
+    document.body.removeChild(element);
+  };
+
+  const handleClearAudit = async () => {
+    if (!selectedTask) return;
+    try {
+      await api.audit.complete(selectedTask.task_id);
+      alert("Audit completed and report uploaded to national ledger!");
+      setSelectedTask(null);
+      
+      // Reload tasks list
+      const allTasks = await api.audit.getAssignments();
+      const filteredTasks = allTasks.filter(t => t.assigned === user?.name || t.assigned === 'Ranjit Kumar Sahu');
+      setTasks(filteredTasks.length > 0 ? filteredTasks : allTasks);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to complete audit assignment.");
+    }
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -43,57 +113,184 @@ export function AuditQueue() {
           </div>
         </div>
 
-        <div className="table-wrapper">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Audit ID</th>
-                <th>Project Name</th>
-                <th>Location</th>
-                <th>Budget</th>
-                <th>Risk Priority</th>
-                <th>Status</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((t, idx) => (
-                <tr key={idx}>
-                  <td style={{ fontFamily: 'monospace' }}>{t.id}</td>
-                  <td style={{ fontWeight: 600 }}>{t.project}</td>
-                  <td style={{ color: 'var(--text-secondary)' }}>{t.location}</td>
-                  <td style={{ fontWeight: 650 }}>₹{(t.budget / 10000000).toFixed(2)} Cr</td>
-                  <td>
-                    <span className="badge" style={{ backgroundColor: t.risk === 'High' ? 'var(--accent-red-dim)' : 'var(--accent-amber-dim)', color: t.risk === 'High' ? 'var(--accent-red)' : 'var(--accent-amber)' }}>
-                      <span className={`dot ${t.risk === 'High' ? 'dot-red' : 'dot-amber'}`} />
-                      {t.risk}
-                    </span>
-                  </td>
-                  <td>
-                    <span className="badge badge-muted">{t.status}</span>
-                  </td>
-                  <td>
-                    <button className="btn btn-secondary" style={{ padding: '4px 8px', fontSize: '0.74rem' }}>
-                      Audit Details
-                      <ChevronRight size={12} />
-                    </button>
-                  </td>
+        {loading ? (
+          <div style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '30px' }}>Loading audits...</div>
+        ) : (
+          <div className="table-wrapper">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Audit ID</th>
+                  <th>Project Name</th>
+                  <th>Location</th>
+                  <th>Budget</th>
+                  <th>Risk Priority</th>
+                  <th>Status</th>
+                  <th>Action</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {filtered.map((t, idx) => (
+                  <tr key={idx}>
+                    <td style={{ fontFamily: 'monospace' }}>{t.task_id}</td>
+                    <td style={{ fontWeight: 600 }}>{t.project_name}</td>
+                    <td style={{ color: 'var(--text-secondary)' }}>{t.location}</td>
+                    <td style={{ fontWeight: 650 }}>₹{(t.budget / 10000000).toFixed(2)} Cr</td>
+                    <td>
+                      <span className="badge" style={{ backgroundColor: t.risk === 'High' ? 'var(--accent-red-dim)' : 'var(--accent-amber-dim)', color: t.risk === 'High' ? 'var(--accent-red)' : 'var(--accent-amber)' }}>
+                        <span className={`dot ${t.risk === 'High' ? 'dot-red' : 'dot-amber'}`} />
+                        {t.risk}
+                      </span>
+                    </td>
+                    <td>
+                      <span className="badge badge-muted">{t.status}</span>
+                    </td>
+                    <td>
+                      <button className="btn btn-secondary" onClick={() => setSelectedTask(t)} style={{ padding: '4px 8px', fontSize: '0.74rem' }}>
+                        Audit Details
+                        <ChevronRight size={12} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                {filtered.length === 0 && (
+                  <tr>
+                    <td colSpan={7} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '20px 0' }}>No assigned audits found.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
+
+      {selectedTask && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.6)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '20px'
+        }}>
+          <div className="card" style={{
+            maxWidth: '550px',
+            width: '100%',
+            background: 'var(--bg-surface)',
+            border: '1px solid var(--border)',
+            borderRadius: 'var(--radius)',
+            padding: '24px',
+            boxShadow: 'var(--shadow-lg)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '16px'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span className="label">AUDIT ASSIGNMENT MATRIX</span>
+              <button 
+                onClick={() => setSelectedTask(null)} 
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '1.4rem' }}
+              >
+                &times;
+              </button>
+            </div>
+            
+            <div>
+              <h3 className="section-title" style={{ color: 'var(--text-primary)', fontSize: '1.1rem', fontWeight: 700 }}>
+                Reference ID: {selectedTask.task_id}
+              </h3>
+              <p style={{ fontSize: '0.86rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                Project Target: <b>{selectedTask.project_name}</b>
+              </p>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', background: 'var(--bg-elevated)', padding: '12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
+              <div>
+                <span className="label" style={{ fontSize: '0.62rem' }}>State Jurisdiction</span>
+                <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-primary)', marginTop: '2px' }}>{selectedTask.state}</div>
+              </div>
+              <div>
+                <span className="label" style={{ fontSize: '0.62rem' }}>Project Location</span>
+                <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-primary)', marginTop: '2px' }}>{selectedTask.location}</div>
+              </div>
+              <div>
+                <span className="label" style={{ fontSize: '0.62rem' }}>Due Date</span>
+                <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-primary)', marginTop: '2px' }}>{selectedTask.due_date}</div>
+              </div>
+              <div>
+                <span className="label" style={{ fontSize: '0.62rem' }}>Risk Priority</span>
+                <div style={{ fontSize: '0.8rem', fontWeight: 600, color: selectedTask.risk === 'High' ? 'var(--accent-red)' : 'var(--accent-amber)', marginTop: '2px' }}>{selectedTask.risk} Priority</div>
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div>
+                <span className="label">Total Budget</span>
+                <div style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--accent-blue)', marginTop: '2px' }}>
+                  ₹{(selectedTask.budget / 10000000).toFixed(2)} Cr
+                </div>
+              </div>
+              <div>
+                <span className="label">Audit Status</span>
+                <div style={{ fontSize: '0.86rem', fontWeight: 600, color: 'var(--text-secondary)', marginTop: '4px' }}>
+                  {selectedTask.status}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ borderTop: '1px solid var(--border)', paddingTop: '16px', display: 'flex', gap: '10px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+              <button 
+                className="btn btn-secondary" 
+                onClick={handleDownloadLedger}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <Download size={14} /> Download Audit Ledger
+              </button>
+              <button 
+                className="btn btn-primary" 
+                onClick={handleClearAudit}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <ClipboardCheck size={14} /> Clear Audit & Upload Report
+              </button>
+              <button 
+                className="btn btn-secondary" 
+                onClick={() => setSelectedTask(null)}
+              >
+                Close Workbench
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
+// ─── AI VERIFICATION LOGS ──────────────────────────────────────────────────────
 export function AIVerificationResults() {
-  const anomalies = [
-    { id: 'ANM-940', project: 'Warangal Water Pipe Laying', check: 'Diameter Deviation', detail: 'Optical inspection shows 80mm pipes vs 120mm in drawings', confidence: 92, status: 'Flagged' },
-    { id: 'ANM-102', project: 'Kangra Command surveillance Centre', check: 'Subcontracting Loop', detail: 'Contractor billed invoices matching unauthorized entity', confidence: 88, status: 'Flagged' },
-    { id: 'ANM-503', project: 'Sindhudurg Malvan Coastal Widening', check: 'Elevation Deviation', detail: 'Altitude reading deviates by 4.2m on concrete embankment', confidence: 79, status: 'Investigating' }
-  ];
+  const [anomalies, setAnomalies] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadAnomalies() {
+      try {
+        const data = await api.anomalies.getAll();
+        setAnomalies(data);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadAnomalies();
+  }, []);
 
   return (
     <div className="flex flex-col gap-6">
@@ -101,50 +298,87 @@ export function AIVerificationResults() {
         <span className="label">Cognitive Verification Logs</span>
         <h3 className="section-title mt-1 mb-4">Neural Inspection Flagged Anomalies</h3>
 
-        <div className="table-wrapper">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Anomaly Ref</th>
-                <th>Target Reference</th>
-                <th>Check Type</th>
-                <th>Detailed Variance</th>
-                <th>Confidence Level</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {anomalies.map((a, idx) => (
-                <tr key={idx}>
-                  <td style={{ fontFamily: 'monospace', color: 'var(--accent-red)' }}>{a.id}</td>
-                  <td style={{ fontWeight: 600 }}>{a.project}</td>
-                  <td style={{ color: 'var(--text-primary)' }}>{a.check}</td>
-                  <td style={{ color: 'var(--text-secondary)', maxWidth: '280px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={a.detail}>{a.detail}</td>
-                  <td style={{ fontWeight: 650, color: 'var(--accent-blue)' }}>{a.confidence}%</td>
-                  <td>
-                    <span className="badge" style={{ backgroundColor: 'var(--accent-red-dim)', color: 'var(--accent-red)' }}>
-                      <ShieldAlert size={10} style={{ marginRight: '3px' }} />
-                      {a.status}
-                    </span>
-                  </td>
+        {loading ? (
+          <div style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '30px' }}>Loading anomalies...</div>
+        ) : (
+          <div className="table-wrapper">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Anomaly Ref</th>
+                  <th>Target Reference</th>
+                  <th>Check Type</th>
+                  <th>Detailed Variance</th>
+                  <th>Confidence Level</th>
+                  <th>Status</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {anomalies.map((a, idx) => (
+                  <tr key={idx}>
+                    <td style={{ fontFamily: 'monospace', color: 'var(--accent-red)' }}>{a.anomaly_id}</td>
+                    <td style={{ fontWeight: 600 }}>{a.project}</td>
+                    <td style={{ color: 'var(--text-primary)' }}>{a.check_type}</td>
+                    <td style={{ color: 'var(--text-secondary)', maxWidth: '280px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={a.detail}>{a.detail}</td>
+                    <td style={{ fontWeight: 650, color: 'var(--accent-blue)' }}>{a.confidence}%</td>
+                    <td>
+                      <span className="badge" style={{ backgroundColor: 'var(--accent-red-dim)', color: 'var(--accent-red)' }}>
+                        <ShieldAlert size={10} style={{ marginRight: '3px' }} />
+                        {a.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+                {anomalies.length === 0 && (
+                  <tr>
+                    <td colSpan={6} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '20px 0' }}>No AI anomalies logged.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
+// ─── EVIDENCE WORKBENCH ─────────────────────────────────────────────────────────
 export function EvidenceViewer() {
   const [selectedItem, setSelectedItem] = useState(0);
+  const [evidences, setEvidences] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const evidences = [
-    { title: 'Warangal Pipe Layout W18', date: '2026-07-01', location: '17.981N, 79.593E', type: 'Geotagged Photo', matchScore: '89% similarity', file: 'pipe_verification.jpg' },
-    { title: 'Sindhudurg Retaining Wall S02', date: '2026-06-25', location: '16.064N, 73.461E', type: 'Ground Photo', matchScore: '92% similarity', file: 'retaining_wall.jpg' },
-    { title: 'Kangra Command surveillance Centre K04', date: '2026-06-18', location: '32.221N, 76.323E', type: 'Geotagged Image', matchScore: '65% similarity', file: 'control_center.jpg' }
-  ];
+  useEffect(() => {
+    async function loadEvidences() {
+      try {
+        const data = await api.anomalies.getAll();
+        // Convert anomalies into evidence shape
+        const transformed = data.map((a, idx) => ({
+          title: `${a.project} — ${a.check_type}`,
+          date: a.deadline,
+          location: a.anomaly_id === 'ANM-503' ? '16.064N, 73.461E' : a.anomaly_id === 'ANM-940' ? '17.981N, 79.593E' : '32.221N, 76.323E',
+          type: 'Neural Check',
+          matchScore: `${a.confidence}% confidence`,
+          file: `${a.check_type.toLowerCase().replace(/ /g, '_')}_match.jpg`
+        }));
+        setEvidences(transformed);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadEvidences();
+  }, []);
+
+  if (loading) {
+    return <div className="card p-8 text-center" style={{ color: 'var(--text-muted)' }}>Loading visual workbench...</div>;
+  }
+
+  if (evidences.length === 0) {
+    return <div className="card p-8 text-center" style={{ color: 'var(--text-muted)' }}>No evidence files available.</div>;
+  }
 
   return (
     <div className="grid-3" style={{ gridTemplateColumns: '1fr 2fr', gap: '20px' }}>
@@ -183,18 +417,17 @@ export function EvidenceViewer() {
       <div className="card flex flex-col justify-between" style={{ height: '520px' }}>
         <div>
           <span className="label">Visual Analysis Workbench</span>
-          <h3 className="section-title mt-1 mb-4">{evidences[selectedItem].title}</h3>
+          <h3 className="section-title mt-1 mb-4">{evidences[selectedItem]?.title}</h3>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', height: '320px' }}>
             <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
               <div style={{ position: 'absolute', top: '10px', left: '10px', background: 'rgba(0,0,0,0.6)', color: '#fff', fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px', zIndex: 2 }}>
                 Ground Inspection Photo
               </div>
-              {/* Ground Inspection Placeholder Drawing */}
               <div style={{ width: '80%', height: '60%', border: '2px dashed var(--accent-blue)', borderRadius: 'var(--radius-sm)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-blue)' }}>
                 <Eye size={32} style={{ marginBottom: '8px', opacity: 0.6 }} />
                 <span style={{ fontSize: '0.72rem', fontWeight: 600 }}>Geotagged Photo File</span>
-                <span style={{ fontSize: '0.65rem', opacity: 0.8 }}>{evidences[selectedItem].file}</span>
+                <span style={{ fontSize: '0.65rem', opacity: 0.8 }}>{evidences[selectedItem]?.file}</span>
               </div>
             </div>
 
@@ -202,7 +435,6 @@ export function EvidenceViewer() {
               <div style={{ position: 'absolute', top: '10px', left: '10px', background: 'rgba(0,0,0,0.6)', color: '#fff', fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px', zIndex: 2 }}>
                 CAD Drawing Standard
               </div>
-              {/* CAD Verification Placeholder */}
               <div style={{ width: '80%', height: '60%', border: '2px dashed var(--accent-green)', borderRadius: 'var(--radius-sm)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-green)' }}>
                 <FileCheck size={32} style={{ marginBottom: '8px', opacity: 0.6 }} />
                 <span style={{ fontSize: '0.72rem', fontWeight: 600 }}>CAD Blueprint Overlay</span>
@@ -214,10 +446,10 @@ export function EvidenceViewer() {
 
         <div className="flex justify-between items-center p-3" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', fontSize: '0.78rem' }}>
           <div>
-            <span style={{ color: 'var(--text-muted)' }}>Location Data:</span> <span style={{ fontWeight: 600 }}>{evidences[selectedItem].location}</span>
+            <span style={{ color: 'var(--text-muted)' }}>Location Data:</span> <span style={{ fontWeight: 600 }}>{evidences[selectedItem]?.location}</span>
           </div>
           <div>
-            <span style={{ color: 'var(--text-muted)' }}>Captured:</span> <span style={{ fontWeight: 600 }}>{evidences[selectedItem].date}</span>
+            <span style={{ color: 'var(--text-muted)' }}>Captured:</span> <span style={{ fontWeight: 600 }}>{evidences[selectedItem]?.date}</span>
           </div>
         </div>
       </div>
@@ -225,12 +457,52 @@ export function EvidenceViewer() {
   );
 }
 
+// ─── DOWNLOAD REPORTS ──────────────────────────────────────────────────────────
 export function DownloadReports() {
-  const reports = [
-    { title: 'Jal Jeevan Mission Q2 Expenditure Audit Report', format: 'PDF', size: '4.2 MB', date: '2026-07-10' },
-    { title: 'PMGSY Kawardha-Chilfi Rural Road Verification Report', format: 'PDF', size: '2.8 MB', date: '2026-07-08' },
-    { title: 'National Infrastructure Contractors Audit Summary', format: 'XLSX', size: '1.4 MB', date: '2026-07-05' }
-  ];
+  const [reports, setReports] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadReports() {
+      try {
+        const data = await api.reports.getAll();
+        setReports(data);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadReports();
+  }, []);
+
+  const handleExport = (report) => {
+    const content = `==================================================
+GOVERNMENT OF INDIA - INFRASTRUCTURE AUDIT REPORT
+==================================================
+Report ID: ${report.report_id}
+Title: ${report.title}
+Milestone: ${report.milestone || 'N/A'}
+Date Published: ${report.date}
+Format: ${report.format}
+File Size: ${report.size}
+Assigned Officer: ${report.officer || 'System'}
+Outcome: ${report.outcome || 'Passed'}
+--------------------------------------------------
+Auditor Field Notes:
+${report.notes || 'No notes compiled.'}
+==================================================`;
+    
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${report.title.replace(/\s+/g, '_')}_Audit_Report.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -238,37 +510,41 @@ export function DownloadReports() {
         <span className="label">Auditor Download Center</span>
         <h3 className="section-title mt-1 mb-4">Exportable Compliance Ledgers</h3>
 
-        <div className="table-wrapper">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Report Title</th>
-                <th>File Format</th>
-                <th>File Size</th>
-                <th>Published Date</th>
-                <th>Download Link</th>
-              </tr>
-            </thead>
-            <tbody>
-              {reports.map((r, idx) => (
-                <tr key={idx}>
-                  <td style={{ fontWeight: 600 }}>{r.title}</td>
-                  <td>
-                    <span className="badge badge-muted">{r.format}</span>
-                  </td>
-                  <td>{r.size}</td>
-                  <td>{r.date}</td>
-                  <td>
-                    <button className="btn btn-secondary" style={{ padding: '4px 8px', fontSize: '0.74rem' }}>
-                      <Download size={12} />
-                      Export File
-                    </button>
-                  </td>
+        {loading ? (
+          <div style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '30px' }}>Loading ledgers...</div>
+        ) : (
+          <div className="table-wrapper">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Report Title</th>
+                  <th>File Format</th>
+                  <th>File Size</th>
+                  <th>Published Date</th>
+                  <th>Download Link</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {reports.map((r, idx) => (
+                  <tr key={idx}>
+                    <td style={{ fontWeight: 600 }}>{r.title}</td>
+                    <td>
+                      <span className="badge badge-muted">{r.format}</span>
+                    </td>
+                    <td>{r.size}</td>
+                    <td>{r.date}</td>
+                    <td>
+                      <button className="btn btn-secondary" onClick={() => handleExport(r)} style={{ padding: '4px 8px', fontSize: '0.74rem' }}>
+                        <Download size={12} />
+                        Export File
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );

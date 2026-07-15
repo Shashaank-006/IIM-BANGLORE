@@ -4,7 +4,7 @@ import {
   HardHat, ShieldCheck, ShieldAlert, Star, AlertTriangle, 
   Layers, FolderOpen, Check, BadgePercent, Landmark, Search
 } from 'lucide-react';
-import { contractors } from '../../data/mockData';
+import { useProjects } from '../../context/ProjectContext';
 
 const formatINR = (value) => {
   if (value >= 10000000) return `₹${(value / 10000000).toFixed(2)} Cr`;
@@ -12,6 +12,7 @@ const formatINR = (value) => {
 };
 
 export default function Contractors({ searchQuery }) {
+  const { allContractors: contractors } = useProjects();
   // Filters State
   const [statusFilter, setStatusFilter] = useState('All');
   const [riskFilter, setRiskFilter] = useState('All');

@@ -3,6 +3,7 @@ import { Search, Bell, ChevronDown, Sun, Moon, LogOut, UserCircle, Settings } fr
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useProjects } from '../../context/ProjectContext';
 import styles from './Topbar.module.css';
 
 const pageTitles = {
@@ -46,8 +47,9 @@ const pageTitles = {
 export default function Topbar({ searchQuery = '', setSearchQuery = () => {} }) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, switchRole } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { unreadCount } = useProjects();
 
   const page = pageTitles[location.pathname] || { title: 'GovWatch', subtitle: '' };
   const [dropOpen, setDropOpen] = useState(false);
@@ -100,7 +102,7 @@ export default function Topbar({ searchQuery = '', setSearchQuery = () => {} }) 
         {/* Notifications */}
         <button className={styles.iconBtn} aria-label="Notifications" onClick={() => navigate('/notifications')}>
           <Bell size={16} />
-          <span className={styles.notifBadge}>3</span>
+          {unreadCount > 0 && <span className={styles.notifBadge}>{unreadCount}</span>}
         </button>
 
         {/* Theme toggle */}
@@ -136,7 +138,7 @@ export default function Topbar({ searchQuery = '', setSearchQuery = () => {} }) 
           </button>
 
           {dropOpen && (
-            <div className={styles.dropdown}>
+            <div className={styles.dropdown} style={{ minWidth: '240px' }}>
               <div className={styles.dropHeader}>
                 <div className={styles.dropName}>{displayName}</div>
                 <div className={styles.dropRole}>{displayRole}</div>
@@ -144,6 +146,39 @@ export default function Topbar({ searchQuery = '', setSearchQuery = () => {} }) 
                   <div className={styles.dropId}>ID: {user.employeeId}</div>
                 )}
               </div>
+              <div className={styles.dropDivider} />
+              
+              <div style={{ padding: '8px 12px' }}>
+                <span style={{ fontSize: '0.68rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  Switch Session Role
+                </span>
+                <select 
+                  value={user?.role} 
+                  onChange={(e) => {
+                    switchRole(e.target.value);
+                    setDropOpen(false);
+                  }}
+                  style={{
+                    width: '100%',
+                    marginTop: '6px',
+                    padding: '6px',
+                    fontSize: '0.74rem',
+                    background: 'var(--bg-elevated)',
+                    border: '1px solid var(--border)',
+                    borderRadius: 'var(--radius-sm)',
+                    color: 'var(--text-primary)',
+                    outline: 'none',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <option value="Joint Secretary, Ministry of Rural Development">Joint Secretary</option>
+                  <option value="CAG Auditor">CAG Auditor</option>
+                  <option value="State Audit Officer">State Audit Officer</option>
+                  <option value="District Collector">District Collector</option>
+                  <option value="Municipal Officer">Municipal Officer</option>
+                </select>
+              </div>
+              
               <div className={styles.dropDivider} />
               <button className={styles.dropItem} onClick={handleLogout}>
                 <LogOut size={13} />

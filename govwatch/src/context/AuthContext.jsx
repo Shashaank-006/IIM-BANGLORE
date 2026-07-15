@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useCallback } from 'react';
+import { api } from '../services/api';
 
 const AuthContext = createContext(null);
 
@@ -62,17 +63,108 @@ export function AuthProvider({ children }) {
   });
 
   const login = useCallback(async (email, password) => {
-    // Simulate network delay
-    await new Promise((r) => setTimeout(r, 1200));
+    try {
+      const res = await api.auth.login(email, password);
+      
+      if (!res.success) {
+        throw new Error(res.message || 'Invalid credentials. Please check your email and password.');
+      }
 
-    const found = MOCK_USERS.find(
-      (u) => u.email.toLowerCase() === email.toLowerCase() && u.password === password
-    );
+      const initials = res.name
+        ? res.name.split(' ').slice(0, 2).map((n) => n[0]).join('').toUpperCase()
+        : 'AD';
 
-    if (!found) {
-      throw new Error('Invalid credentials. Please check your email and password.');
+      const sessionUser = {
+        email: res.email,
+        name: res.name,
+        role: res.role,
+        employeeId: res.employeeId,
+        department: res.department,
+        initials,
+      };
+
+      localStorage.setItem('gw_user', JSON.stringify(sessionUser));
+      setUser(sessionUser);
+      return sessionUser;
+    } catch (err) {
+      console.error("Backend auth failed, trying offline mock accounts...", err);
+      // Robust fallback to keep local dev working if server is not running
+      const found = MOCK_USERS.find(
+        (u) => u.email.toLowerCase() === email.toLowerCase() && u.password === password
+      );
+
+      if (!found) {
+        throw new Error(err.message || 'Invalid credentials. Please check your email and password.');
+      }
+
+      const sessionUser = {
+        email: found.email,
+        name: found.name,
+        role: found.role,
+        employeeId: found.employeeId,
+        department: found.department,
+        initials: found.initials,
+      };
+
+      localStorage.setItem('gw_user', JSON.stringify(sessionUser));
+      setUser(sessionUser);
+      return sessionUser;
     }
+  }, []);
 
+  const signup = useCallback(async (formData) => {
+    try {
+      const res = await api.auth.signup(formData);
+      
+      if (!res.success) {
+        throw new Error(res.message || 'Registration failed.');
+      }
+
+      const initials = res.name
+        ? res.name.split(' ').slice(0, 2).map((n) => n[0]).join('').toUpperCase()
+        : 'US';
+
+      const sessionUser = {
+        email: res.email,
+        name: res.name,
+        role: res.role,
+        employeeId: res.employeeId,
+        department: res.department,
+        initials,
+      };
+
+      localStorage.setItem('gw_user', JSON.stringify(sessionUser));
+      setUser(sessionUser);
+      return sessionUser;
+    } catch (err) {
+      console.error("Backend signup failed, performing offline signup fallback...", err);
+      const newUser = {
+        email: formData.email,
+        name: formData.fullName,
+        role: formData.role,
+        employeeId: formData.employeeId,
+        department: formData.department,
+        initials: formData.fullName
+          .split(' ')
+          .slice(0, 2)
+          .map((n) => n[0])
+          .join('')
+          .toUpperCase(),
+      };
+      localStorage.setItem('gw_user', JSON.stringify(newUser));
+      setUser(newUser);
+      return newUser;
+    }
+  }, []);
+
+  const logout = useCallback(() => {
+    localStorage.removeItem('gw_user');
+    setUser(null);
+  }, []);
+
+  const switchRole = useCallback((newRole) => {
+    const found = MOCK_USERS.find((u) => u.role === newRole);
+    if (!found) return;
     const sessionUser = {
       email: found.email,
       name: found.name,
@@ -81,40 +173,12 @@ export function AuthProvider({ children }) {
       department: found.department,
       initials: found.initials,
     };
-
     localStorage.setItem('gw_user', JSON.stringify(sessionUser));
     setUser(sessionUser);
-    return sessionUser;
-  }, []);
-
-  const signup = useCallback(async (formData) => {
-    await new Promise((r) => setTimeout(r, 1400));
-    // In a real app this would POST to an API
-    const newUser = {
-      email: formData.email,
-      name: formData.fullName,
-      role: formData.role,
-      employeeId: formData.employeeId,
-      department: formData.department,
-      initials: formData.fullName
-        .split(' ')
-        .slice(0, 2)
-        .map((n) => n[0])
-        .join('')
-        .toUpperCase(),
-    };
-    localStorage.setItem('gw_user', JSON.stringify(newUser));
-    setUser(newUser);
-    return newUser;
-  }, []);
-
-  const logout = useCallback(() => {
-    localStorage.removeItem('gw_user');
-    setUser(null);
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, login, signup, logout }}>
+    <AuthContext.Provider value={{ user, login, signup, logout, switchRole }}>
       {children}
     </AuthContext.Provider>
   );

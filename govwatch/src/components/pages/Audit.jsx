@@ -4,9 +4,10 @@ import {
   ClipboardList, AlertTriangle, AlertCircle, CheckCircle, 
   Info, ShieldCheck, Search, ShieldAlert, Cpu, User, UserCheck
 } from 'lucide-react';
-import { auditLogs } from '../../data/mockData';
+import { useProjects } from '../../context/ProjectContext';
 
 export default function Audit({ searchQuery }) {
+  const { allAuditLogs: auditLogs } = useProjects();
   // Filters State
   const [severityFilter, setSeverityFilter] = useState('All');
   const [actorTypeFilter, setActorTypeFilter] = useState('All');

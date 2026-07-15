@@ -8,7 +8,7 @@ import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, 
   BarChart, Bar, Cell, CartesianGrid
 } from 'recharts';
-import { kpiData, budgetData, activityFeed, auditLogs, projects } from '../../data/mockData';
+import { useProjects } from '../../context/ProjectContext';
 
 // Formatter for currency in Indian format (Lakhs / Crores)
 const formatINR = (value) => {
@@ -20,9 +20,18 @@ const formatINR = (value) => {
 
 export default function Dashboard({ searchQuery }) {
   const navigate = useNavigate();
+  const { allProjects, allAuditLogs, kpiData, budgetData, activityFeed } = useProjects();
+
+  if (!kpiData || !budgetData) {
+    return (
+      <div className="card p-8 text-center" style={{ color: 'var(--text-muted)' }}>
+        Loading dashboard insights...
+      </div>
+    );
+  }
 
   // Filter projects if search query is provided
-  const filteredProjects = projects.filter(p => 
+  const filteredProjects = allProjects.filter(p => 
     p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     p.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
     p.contractor.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -309,7 +318,7 @@ export default function Dashboard({ searchQuery }) {
           <div style={{ borderTop: '1px solid var(--border)', paddingTop: '15px' }}>
             <h4 className="label mb-3">Audit Warnings</h4>
             <div className="flex flex-col gap-2">
-              {auditLogs
+              {allAuditLogs
                 .filter((log) => log.severity === 'critical')
                 .slice(0, 2)
                 .map((log) => (

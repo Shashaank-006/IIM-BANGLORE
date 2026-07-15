@@ -6,7 +6,7 @@ import {
   User, HardHat, Landmark, Clock, CheckCircle2, 
   AlertTriangle, HelpCircle
 } from 'lucide-react';
-import { projects, schemes } from '../../data/mockData';
+import { useProjects } from '../../context/ProjectContext';
 
 const formatINR = (value) => {
   if (value >= 10000000) return `₹${(value / 10000000).toFixed(2)} Cr`;
@@ -16,6 +16,15 @@ const formatINR = (value) => {
 export default function Projects({ searchQuery }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const [selectedProjectId, setSelectedProjectId] = useState(null);
+  const { allProjects, schemes } = useProjects();
+
+  if (!schemes || schemes.length === 0) {
+    return (
+      <div className="card p-8 text-center" style={{ color: 'var(--text-muted)' }}>
+        Loading projects registry...
+      </div>
+    );
+  }
 
   // Filters State
   const [schemeFilter, setSchemeFilter] = useState('All');
@@ -41,7 +50,7 @@ export default function Projects({ searchQuery }) {
   };
 
   // Filter projects based on filters + search query
-  const filtered = projects.filter(p => {
+  const filtered = allProjects.filter(p => {
     const matchesSearch = 
       p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -56,7 +65,7 @@ export default function Projects({ searchQuery }) {
     return matchesSearch && matchesScheme && matchesStatus && matchesRisk;
   });
 
-  const selectedProject = projects.find(p => p.id === selectedProjectId);
+  const selectedProject = allProjects.find(p => p.id === selectedProjectId);
 
   return (
     <div style={{ position: 'relative', minHeight: 'calc(100vh - var(--topbar-height) - 100px)' }}>

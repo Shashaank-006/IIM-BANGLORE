@@ -7,7 +7,7 @@ import {
   Bot, Eye, Download, TrendingUp, AlertTriangle,
   Route, CheckSquare, FileText, RefreshCw, Upload,
   Camera, MessageSquare, HelpCircle, Bell, Settings,
-  UserCircle
+  UserCircle, FilePlus2
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import styles from './Sidebar.module.css';
@@ -83,6 +83,7 @@ const getNavItems = (role) => {
   if (role === 'Municipal Officer') {
     return [
       { path: '/', icon: LayoutDashboard, label: 'Municipal Dashboard' },
+      { path: '/mo/register-project', icon: FilePlus2, label: 'Register Project' },
       { path: '/mo/project-updates', icon: RefreshCw, label: 'Project Updates' },
       { path: '/mo/upload-completion', icon: Upload, label: 'Upload Reports' },
       { path: '/mo/upload-images', icon: Camera, label: 'Upload Geotags' },

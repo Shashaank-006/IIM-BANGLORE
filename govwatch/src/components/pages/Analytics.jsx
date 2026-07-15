@@ -7,32 +7,66 @@ import {
   TrendingUp, ShieldAlert, Award, FileSpreadsheet, 
   HelpCircle, ChevronRight, Activity, Percent
 } from 'lucide-react';
-import { budgetData, projects, kpiData } from '../../data/mockData';
+import { useProjects } from '../../context/ProjectContext';
 
 const formatINR = (value) => {
   if (value >= 10000000) return `₹${(value / 10000000).toFixed(2)} Cr`;
   return `₹${(value / 100000).toFixed(1)} L`;
 };
 
-// Risk distribution data calculated from mockData
-const riskDistribution = [
-  { name: 'Low Risk', value: 5, fill: '#10B981', bgDim: 'var(--accent-green-dim)' },
-  { name: 'Medium Risk', value: 1, fill: '#F59E0B', bgDim: 'var(--accent-amber-dim)' },
-  { name: 'High Risk', value: 2, fill: '#EF4444', bgDim: 'var(--accent-red-dim)' }
-];
-
-// District level summary
-const districtPerformance = [
-  { name: 'Bankura', state: 'West Bengal', completion: 100, status: 'Completed', color: 'var(--accent-green)' },
-  { name: 'Mysuru', state: 'Karnataka', completion: 100, status: 'Completed', color: 'var(--accent-green)' },
-  { name: 'Bastar', state: 'Chhattisgarh', completion: 85, status: 'In Progress', color: 'var(--accent-blue)' },
-  { name: 'Kabirdham', state: 'Chhattisgarh', completion: 61, status: 'In Progress', color: 'var(--accent-blue)' },
-  { name: 'Nandurbar', state: 'Maharashtra', completion: 38, status: 'In Progress', color: 'var(--accent-blue)' },
-  { name: 'Warangal', state: 'Telangana', completion: 34, status: 'Delayed', color: 'var(--accent-amber)' },
-  { name: 'Kangra', state: 'Himachal Pradesh', completion: 33, status: 'Suspended', color: 'var(--accent-red)' },
-];
-
 export default function Analytics() {
+  const { 
+    allProjects = [],
+    budgetData, 
+    kpiData 
+  } = useProjects();
+
+  const safeBudgetData = budgetData || { monthlyTrend: [], schemeWise: [] };
+  const safeKpiData = kpiData || { budgetUtilization: 0, totalProjects: 0, activeProjects: 0, totalBudget: 0 };
+
+  const lowCount = allProjects.filter(p => p.riskScore === 'Low').length;
+  const mediumCount = allProjects.filter(p => p.riskScore === 'Medium').length;
+  const highCount = allProjects.filter(p => p.riskScore === 'High').length;
+
+  const riskDistribution = [
+    { name: 'Low Risk', value: lowCount, fill: '#10B981', bgDim: 'var(--accent-green-dim)' },
+    { name: 'Medium Risk', value: mediumCount, fill: '#F59E0B', bgDim: 'var(--accent-amber-dim)' },
+    { name: 'High Risk', value: highCount, fill: '#EF4444', bgDim: 'var(--accent-red-dim)' }
+  ];
+
+  // Group by district dynamically
+  const districtMap = {};
+  allProjects.forEach(p => {
+    const distName = p.district || p.village || 'Unknown';
+    if (!districtMap[distName]) {
+      districtMap[distName] = { name: distName, state: p.state || '', completions: [], statuses: [] };
+    }
+    districtMap[distName].completions.push(p.completion || 0);
+    districtMap[distName].statuses.push(p.status);
+  });
+
+  const districtPerformance = Object.values(districtMap).map(d => {
+    const avgCompletion = d.completions.length ? Math.round(d.completions.reduce((a,b)=>a+b, 0) / d.completions.length) : 0;
+    
+    let status = 'In Progress';
+    if (d.statuses.includes('Suspended')) status = 'Suspended';
+    else if (d.statuses.includes('Delayed')) status = 'Delayed';
+    else if (avgCompletion === 100) status = 'Completed';
+    
+    let color = 'var(--accent-blue)';
+    if (status === 'Completed') color = 'var(--accent-green)';
+    else if (status === 'Delayed') color = 'var(--accent-amber)';
+    else if (status === 'Suspended') color = 'var(--accent-red)';
+
+    return {
+      name: d.name,
+      state: d.state,
+      completion: avgCompletion,
+      status,
+      color
+    };
+  }).sort((a, b) => b.completion - a.completion);
+
   const containerVariants = {
     hidden: { opacity: 0 },
     show: { opacity: 1, transition: { staggerChildren: 0.05 } }
@@ -56,7 +90,7 @@ export default function Analytics() {
         <div className="card flex items-center justify-between p-5">
           <div>
             <span className="label">National Utilization</span>
-            <h3 className="stat-number mt-2">{kpiData.budgetUtilization}%</h3>
+            <h3 className="stat-number mt-2">{safeKpiData?.budgetUtilization ?? 0}%</h3>
             <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>FY 2026 Average</span>
           </div>
           <div className="btn-icon" style={{ background: 'var(--accent-green-dim)', color: 'var(--accent-green)', borderColor: 'rgba(16,185,129,0.2)' }}>
@@ -111,7 +145,7 @@ export default function Analytics() {
           </div>
           <div style={{ width: '100%', height: '300px' }}>
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={budgetData.schemeWise} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+              <BarChart data={safeBudgetData?.schemeWise || []} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="scheme" tickLine={false} />
                 <YAxis tickFormatter={(val) => `₹${val / 10000000} Cr`} tickLine={false} />
@@ -166,7 +200,7 @@ export default function Analytics() {
                   <span className="dot" style={{ backgroundColor: item.fill }} />
                   {item.name}
                 </span>
-                <span style={{ fontWeight: 600 }}>{item.value} ({((item.value / 8) * 100).toFixed(0)}%)</span>
+                <span style={{ fontWeight: 600 }}>{item.value} ({((item.value / (allProjects.length || 1)) * 100).toFixed(0)}%)</span>
               </div>
             ))}
           </div>
@@ -205,7 +239,7 @@ export default function Analytics() {
           </div>
           <div style={{ width: '100%', height: '240px' }} className="mt-3">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={budgetData.monthlyTrend} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <AreaChart data={safeBudgetData?.monthlyTrend || []} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorSpentArea" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="var(--accent-green)" stopOpacity={0.2}/>
