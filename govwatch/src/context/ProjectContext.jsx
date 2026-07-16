@@ -141,6 +141,12 @@ export function ProjectProvider({ children }) {
         const projData = await api.projects.getAll();
         if (projData && Array.isArray(projData)) {
           setDbProjects(projData);
+          if (projData.length === 0) {
+            localStorage.removeItem(STORAGE_KEY);
+            localStorage.removeItem(AUDIT_STORAGE_KEY);
+            setRegisteredProjects([]);
+            setRegistrationAuditLogs([]);
+          }
         }
       } catch (err) {
         console.warn("Could not load projects from API.", err);
