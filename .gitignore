@@ -18,3 +18,24 @@ __pycache__/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Python
+__pycache__/
+*.pyc
+
+# Virtual environments
+venv/
+.venv/
+
+# SQLite
+*.db
+
+# Environment variables
+.env
+
+# Temporary folders
+backend/scratch/
+
+# Frontend
+node_modules/
+dist/

@@ -5,7 +5,7 @@ from databases.database import SessionLocal
 from models.models import (
     Project, AuditAssignment, VerificationRequest, FieldInspection,
     AIConfig, Anomaly, Report, ProjectUpdate,
-    Contractor, Scheme, BudgetAllocations, ActivityFeedItem, AuditLog, Notification
+    Contractor, Scheme, BudgetAllocations, ActivityFeedItem, AuditLog, Notification, User
 )
 
 router = APIRouter()
@@ -250,7 +250,14 @@ def get_dashboard_stats(role: str = None):
             except Exception:
                 pass
                 
-    budget_utilization = round((total_spent / total_budget * 100), 1) if total_budget > 0 else 58.5
+    budget_utilization = round((total_spent / total_budget * 100), 1) if total_budget > 0 else 0.0
+    
+    total_users = db.query(User).count()
+    total_contractors = db.query(Contractor).count()
+    flagged_contractors = db.query(Contractor).filter(Contractor.risk_score == "High").count()
+    verified_contractors = db.query(Contractor).filter(Contractor.verification_status == "Verified").count()
+    reports_count = db.query(Report).count()
+    inspections_count = db.query(FieldInspection).count()
     
     role_kpi = {
         "totalProjects": total_projects,
@@ -260,9 +267,12 @@ def get_dashboard_stats(role: str = None):
         "suspendedProjects": suspended_projects,
         "totalBudget": total_budget,
         "budgetUtilization": budget_utilization,
-        "flaggedContractors": 2,
-        "verifiedContractors": 5,
-        "totalContractors": 7,
+        "flaggedContractors": flagged_contractors,
+        "verifiedContractors": verified_contractors,
+        "totalContractors": total_contractors,
+        "totalUsers": total_users,
+        "reportsCount": reports_count,
+        "inspectionsScheduled": inspections_count,
         "fraudAlertsThisMonth": len(anomalies),
         "pendingDisbursements": sum(1 for c in claims if c.status == "Awaiting Approval")
     }
