@@ -139,7 +139,7 @@ export default function Budget({ searchQuery }) {
       </motion.div>
 
       {/* Scheme Comparative Charts */}
-      <motion.div variants={itemVariants} className="grid-2" style={{ gridTemplateColumns: '1.8fr 1.2fr' }}>
+      <motion.div variants={itemVariants} className="layout-18-12">
         {/* Allocation vs Utilization Recharts */}
         <div className="card">
           <div className="mb-4">

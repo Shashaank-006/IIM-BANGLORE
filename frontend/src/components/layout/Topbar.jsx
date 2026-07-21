@@ -157,6 +157,7 @@ export default function Topbar({ searchQuery = '', setSearchQuery = () => {} }) 
                   onChange={(e) => {
                     switchRole(e.target.value);
                     setDropOpen(false);
+                    navigate('/');
                   }}
                   style={{
                     width: '100%',

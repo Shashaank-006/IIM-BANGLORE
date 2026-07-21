@@ -122,7 +122,7 @@ export default function Sidebar() {
           <Shield size={16} strokeWidth={2.5} />
         </div>
         <div>
-          <div className={styles.brandName}>GovWatch</div>
+          <div className={styles.brandName}>Bhoot Nirman</div>
           <div className={styles.brandTag}>Infrastructure MIS</div>
         </div>
       </div>
@@ -156,11 +156,11 @@ export default function Sidebar() {
 
       <div className={styles.footer}>
         <div className={styles.divider} />
-        <div className={styles.systemStatus}>
-          <span className={styles.statusDot} />
-          <span className={styles.statusText}>All systems operational</span>
-        </div>
-        <div className={styles.version}>v2.4.1 · MIS Portal</div>
+          {/* <div className={styles.systemStatus}>
+            <span className={styles.statusDot} />
+            <span className={styles.statusText}>All systems operational</span>
+          </div>
+          <div className={styles.version}>v2.4.1 · MIS Portal</div> */}
       </div>
     </motion.aside>
   );

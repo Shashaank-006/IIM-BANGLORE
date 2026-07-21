@@ -86,7 +86,7 @@ export function SettingsPage() {
       <div className="card">
         <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', fontWeight: 600 }}>Account</span>
         <h3 style={{ fontSize: '1rem', fontWeight: 700, fontFamily: 'var(--font-display)', marginTop: 4 }}>Profile Information</h3>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginTop: 16 }}>
+        <div className="layout-equal-2" style={{ marginTop: 16 }}>
           {[
             { label: 'Full Name', value: user?.name || '' },
             { label: 'Email Address', value: user?.email || '' },
@@ -151,7 +151,7 @@ export function HelpDocs() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
+      <div className="layout-equal-2">
         {topics.map((t, i) => (
           <div key={i} className="card" style={{ flexDirection: 'row', gap: 14, alignItems: 'flex-start', cursor: 'pointer' }}>
             <div style={{ width: 36, height: 36, borderRadius: 9, background: 'var(--accent-blue-dim)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>

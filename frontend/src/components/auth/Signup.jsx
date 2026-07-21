@@ -49,9 +49,9 @@ export default function Signup() {
 
   const validate = () => {
     if (!form.fullName.trim()) return 'Full name is required.';
-    if (!form.email.trim()) return 'Government email is required.';
-    if (!/\.(gov\.in|nic\.in|org\.in|co\.in)$/i.test(form.email))
-      return 'Please use a valid government email address (e.g. @nic.in or @gov.in).';
+    if (!form.email.trim()) return 'Email address is required.';
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
+      return 'Please enter a valid email address.';
     if (!form.employeeId.trim()) return 'Employee ID is required.';
     if (!form.department) return 'Please select your department.';
     if (!form.role) return 'Please select your role.';
@@ -217,13 +217,13 @@ export default function Signup() {
 
             {/* Email */}
             <div className={styles.field}>
-              <label className={styles.fieldLabel} htmlFor="su-email">Government Email</label>
+              <label className={styles.fieldLabel} htmlFor="su-email">Email Address</label>
               <div className={styles.inputWrap}>
                 <Mail size={14} className={styles.inputIcon} />
                 <input
                   id="su-email" name="email" type="email" autoComplete="email"
                   value={form.email} onChange={handleChange}
-                  className={styles.input} placeholder="you@nic.in" disabled={loading}
+                  className={styles.input} placeholder="you@example.com" disabled={loading}
                 />
               </div>
             </div>

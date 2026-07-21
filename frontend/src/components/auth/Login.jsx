@@ -56,8 +56,8 @@ export default function Login() {
               <Shield size={18} strokeWidth={2.5} />
             </div>
             <div>
-              <div className={styles.brandName}>GovWatch</div>
-              <div className={styles.brandSub}>Infrastructure MIS · v2.4.1</div>
+              <div className={styles.brandName}>Bhoot Nirman</div>
+              {/* <div className={styles.brandSub}>Infrastructure MIS · v2.4.1</div> */}
             </div>
           </div>
 
@@ -66,11 +66,12 @@ export default function Login() {
               National Infrastructure<br />Intelligence Portal
             </h2>
             <p className={styles.panelDesc}>
-              Secure, real-time monitoring of central government infrastructure projects, budget flows, and contractor compliance across all Indian states and districts.
+              An AI system that verifies whether public infrastructure actually exists — using satellite imagery, computer vision, and government expenditure data.
+
             </p>
           </div>
 
-          <div className={styles.statRow}>
+          {/* <div className={styles.statRow}>
             {[
               { value: '₹373 Cr', label: 'Total Allocation' },
               { value: '8', label: 'Active Projects' },
@@ -81,12 +82,11 @@ export default function Login() {
                 <div className={styles.statLabel}>{s.label}</div>
               </div>
             ))}
-          </div>
+          </div> */}
 
           <div className={styles.panelFooter}>
             <span className={styles.securityBadge}>
-              <Shield size={11} />
-              End-to-end encrypted · CERT-In compliant
+              GOOGLE MAPS  +  AI VISION  +  A CAG AUDITOR — IN ONE SYSTEM
             </span>
           </div>
         </motion.div>
@@ -125,7 +125,7 @@ export default function Login() {
             {/* Email */}
             <div className={styles.field}>
               <label className={styles.fieldLabel} htmlFor="login-email">
-                Government Email
+                Email Address
               </label>
               <div className={styles.inputWrap}>
                 <Mail size={14} className={styles.inputIcon} />
@@ -137,7 +137,7 @@ export default function Login() {
                   value={form.email}
                   onChange={handleChange}
                   className={styles.input}
-                  placeholder="you@nic.in or you@gov.in"
+                  placeholder="you@example.com"
                   disabled={loading}
                 />
               </div>

@@ -136,7 +136,7 @@ export default function Analytics() {
       </motion.div>
 
       {/* Primary Analytics row */}
-      <motion.div variants={itemVariants} className="grid-2" style={{ gridTemplateColumns: '2fr 1fr' }}>
+      <motion.div variants={itemVariants} className="layout-2-1">
         {/* Scheme Allocations Stacked Bars */}
         <div className="card">
           <div className="mb-4">

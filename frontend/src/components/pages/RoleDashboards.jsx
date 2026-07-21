@@ -82,14 +82,14 @@ export function JSDashboard({ stats, alerts }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+      <div className="grid-4">
         <StatCard label="Total National Allocation" value={formatINR(stats?.totalBudget ?? 0)} sub="Across all active schemes" icon={Wallet} color="59,130,246" delay={0} />
         <StatCard label="Active Projects" value={String(stats?.activeProjects ?? 0)} sub="Across all schemes" icon={FolderKanban} color="16,185,129" delay={0.06} />
         <StatCard label="AI Anomalies Flagged" value={String(stats?.fraudAlertsThisMonth ?? 0)} sub="Requires investigation" icon={ShieldAlert} color="239,68,68" delay={0.12} />
         <StatCard label="Registered Officers" value={String(stats?.totalUsers ?? 0)} sub="All roles active" icon={Users} color="139,92,246" delay={0.18} />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 20 }}>
+      <div className="layout-2-1">
         <div className="card">
           <span className="label">National Overview</span>
           <h3 className="section-title mt-1 mb-3">State-wise Fund Utilisation</h3>
@@ -119,7 +119,7 @@ export function JSDashboard({ stats, alerts }) {
 export function CAGDashboard({ stats, alerts }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+      <div className="grid-4">
         <StatCard label="Assigned Audits" value={String(stats?.totalProjects ?? 0)} sub="Pending audit tasks" icon={ClipboardCheck} color="59,130,246" delay={0} />
         <StatCard label="AI Flags for Review" value={String(stats?.fraudAlertsThisMonth ?? 0)} sub="High confidence anomalies" icon={ShieldAlert} color="239,68,68" delay={0.06} />
         <StatCard label="Reports Published" value={String(stats?.reportsCount ?? 0)} sub="Last 90 days" icon={FolderKanban} color="16,185,129" delay={0.12} />
@@ -134,7 +134,7 @@ export function CAGDashboard({ stats, alerts }) {
 export function SAODashboard({ stats, alerts }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+      <div className="grid-4">
         <StatCard label="State Projects" value={String(stats?.totalProjects ?? 0)} sub="Active monitoring list" icon={FolderKanban} color="59,130,246" delay={0} />
         <StatCard label="District Alerts" value={String(stats?.fraudAlertsThisMonth ?? 0)} sub="Open investigations" icon={AlertTriangle} color="239,68,68" delay={0.06} />
         <StatCard label="State Allocation" value={formatINR(stats?.totalBudget ?? 0)} sub="FY 2025–26 total" icon={Wallet} color="16,185,129" delay={0.12} />
@@ -149,7 +149,7 @@ export function SAODashboard({ stats, alerts }) {
 export function DCDashboard({ stats, alerts }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+      <div className="grid-4">
         <StatCard label="District Projects" value={String(stats?.totalProjects ?? 0)} sub="Local administration projects" icon={FolderKanban} color="59,130,246" delay={0} />
         <StatCard label="Verification Requests" value={String(stats?.pendingDisbursements ?? 0)} sub="Pending fund release" icon={CheckCircle2} color="245,158,11" delay={0.06} />
         <StatCard label="Field Inspections" value={String(stats?.inspectionsScheduled ?? 0)} sub="Active monitoring runs" icon={MapPin} color="16,185,129" delay={0.12} />
@@ -165,7 +165,7 @@ export function MODashboard({ stats, alerts }) {
   const navigate = useNavigate();
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+      <div className="grid-4">
         <StatCard label="My Projects" value={String(stats?.totalProjects ?? 0)} sub="Municipal Council coverage" icon={FolderKanban} color="59,130,246" delay={0} />
         <StatCard label="AI Findings to Respond" value={String(stats?.fraudAlertsThisMonth ?? 0)} sub="Requires explanation" icon={MessageSquare} color="239,68,68" delay={0.06} />
         <StatCard label="Reports Submitted" value={String(stats?.reportsCount ?? 0)} sub="Last 30 days" icon={Upload} color="16,185,129" delay={0.12} />

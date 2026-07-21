@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { TrendingUp, AlertTriangle, Search, ChevronRight } from 'lucide-react';
 import { api } from '../../../services/api';
+import { useProjects } from '../../../context/ProjectContext';
 
 // ─── DISTRICT PERFORMANCE GRID ──────────────────────────────────────────────────
 export function DistrictPerformance() {
@@ -91,6 +92,7 @@ export function DistrictPerformance() {
 
 // ─── PENDING INVESTIGATIONS ──────────────────────────────────────────────────────
 export function PendingInvestigations() {
+  const { refreshProjects } = useProjects();
   const [investigations, setInvestigations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedCase, setSelectedCase] = useState(null);
@@ -127,6 +129,7 @@ export function PendingInvestigations() {
     setIsSubmitting(true);
     try {
       await api.anomalies.updateStatus(caseId, newStatus);
+      await refreshProjects();
       // Update local state
       setInvestigations(prev => prev.map(inv => inv.id === caseId ? { ...inv, status: newStatus } : inv));
       setSelectedCase(null);
@@ -240,7 +243,7 @@ export function PendingInvestigations() {
               </p>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', background: 'var(--bg-elevated)', padding: '12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
+            <div className="layout-equal-2" style={{ background: 'var(--bg-elevated)', padding: '12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
               <div>
                 <span className="label" style={{ fontSize: '0.62rem' }}>Date Flagged</span>
                 <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-primary)', marginTop: '2px' }}>{selectedCase.raised}</div>

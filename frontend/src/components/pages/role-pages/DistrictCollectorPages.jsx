@@ -113,6 +113,7 @@ export function FieldInspectionAssignments() {
 
 // ─── VERIFICATION REQUESTS ──────────────────────────────────────────────────────
 export function VerificationRequests() {
+  const { refreshProjects } = useProjects();
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState('');
@@ -135,6 +136,7 @@ export function VerificationRequests() {
   const handleApprove = async (id) => {
     try {
       await api.verificationRequests.approve(id);
+      await refreshProjects();
       setMsg(`Claim VR-${id} approved. Budget disbursements updated.`);
       loadRequests();
       setTimeout(() => setMsg(''), 3500);
@@ -146,6 +148,7 @@ export function VerificationRequests() {
   const handleReject = async (id) => {
     try {
       await api.verificationRequests.reject(id);
+      await refreshProjects();
       setMsg(`Claim VR-${id} rejected.`);
       loadRequests();
       setTimeout(() => setMsg(''), 3500);

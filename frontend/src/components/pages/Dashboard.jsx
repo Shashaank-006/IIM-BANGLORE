@@ -219,7 +219,7 @@ export default function Dashboard({ searchQuery }) {
       </motion.div>
 
       {/* Main Content Split: Asymmetric Layout */}
-      <motion.div variants={itemVariants} className="grid-3" style={{ gridTemplateColumns: '2fr 1fr' }}>
+      <motion.div variants={itemVariants} className="layout-2-1">
         {/* Left Side: Recent Projects Table */}
         <div className="card flex flex-col ">
           <div className="flex justify-between items-center mb-4">

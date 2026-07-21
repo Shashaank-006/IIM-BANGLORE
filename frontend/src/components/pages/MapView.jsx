@@ -98,9 +98,8 @@ export default function MapView({ searchQuery }) {
 
   return (
     <div 
-      className="grid-3" 
+      className="layout-115-26" 
       style={{ 
-        gridTemplateColumns: '1.15fr 2.6fr', 
         gap: '20px', 
         minHeight: 'calc(100vh - var(--topbar-height) - 100px)',
         alignItems: 'stretch'

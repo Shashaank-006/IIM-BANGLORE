@@ -684,3 +684,41 @@ h1, h2, h3, h4, h5 { font-family: var(--font-display); font-weight: 600; line-he
   .grid-2 { grid-template-columns: 1fr; }
 }
 
+/* === RESPONSIVE LAYOUT CLASSES FOR VIEWPORTS === */
+.layout-2-1 {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 20px;
+}
+.layout-18-12 {
+  display: grid;
+  grid-template-columns: 1.8fr 1.2fr;
+  gap: 20px;
+}
+.layout-1-2 {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 20px;
+}
+.layout-115-26 {
+  display: grid;
+  grid-template-columns: 1.15fr 2.6fr;
+  gap: 20px;
+}
+.layout-equal-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 860px) {
+  .layout-2-1,
+  .layout-18-12,
+  .layout-1-2,
+  .layout-115-26,
+  .layout-equal-2 {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+}
+

@@ -5,7 +5,7 @@ import { api } from '../../../services/api';
 
 // ─── PROJECT UPDATES & PROGRESS REMARKS ────────────────────────────────────────
 export function ProjectUpdates() {
-  const { allProjects } = useProjects();
+  const { allProjects, refreshProjects } = useProjects();
   const [updates, setUpdates] = useState([]);
   const [successId, setSuccessId] = useState(null);
 
@@ -34,6 +34,7 @@ export function ProjectUpdates() {
     const finalNote = p.note ? p.note.trim() : `Progress updated to ${p.completion}%`;
     try {
       await api.projects.addProgressUpdate(p.id, finalNote, p.completion);
+      await refreshProjects();
       setSuccessId(p.id);
       setTimeout(() => setSuccessId(null), 3000);
       setUpdates(updates.map(u => u.id === p.id ? { ...u, note: '', lastUpdate: new Date().toISOString().split('T')[0] } : u));
@@ -61,7 +62,7 @@ export function ProjectUpdates() {
             </div>
           )}
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+          <div className="layout-equal-2" style={{ marginBottom: 16 }}>
             <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: 14 }}>
               <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: 4 }}>Completion Progress (%)</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -112,7 +113,7 @@ export function ProjectUpdates() {
 
 // ─── UPLOAD COMPLETION REPORT ──────────────────────────────────────────────────
 export function UploadCompletionReport() {
-  const { allProjects } = useProjects();
+  const { allProjects, refreshProjects } = useProjects();
   const [form, setForm] = useState({ project: '', milestone: '', completedDate: '', remarks: '' });
   const [submitted, setSubmitted] = useState(false);
 
@@ -121,6 +122,7 @@ export function UploadCompletionReport() {
     if (!form.project || !form.milestone || !form.completedDate) return;
     try {
       await api.projects.submitCompletionReport(form);
+      await refreshProjects();
       setSubmitted(true);
       setTimeout(() => setSubmitted(false), 3500);
       setForm({ project: '', milestone: '', completedDate: '', remarks: '' });
@@ -258,7 +260,7 @@ export function UploadGeotaggedImages() {
             </select>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          <div className="layout-equal-2">
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               <label style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--text-secondary)' }}>GPS Latitude</label>
               <input value={form.latitude} onChange={e => setForm({...form, latitude: e.target.value})} placeholder="e.g. 16.0640" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '8px 12px', fontSize: '0.83rem', color: 'var(--text-primary)', fontFamily: 'monospace', outline: 'none' }} />
@@ -319,7 +321,7 @@ export function UploadGeotaggedImages() {
               </span>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+            <div className="layout-equal-2" style={{ marginBottom: 16 }}>
               <div style={{ background: 'var(--bg-elevated)', padding: 12, borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
                 <span className="label" style={{ fontSize: '0.62rem' }}>Construction Stage</span>
                 <p style={{ fontSize: '0.85rem', fontWeight: 650, marginTop: 2 }}>{analysisResult.construction_stage || 'Unknown'}</p>
@@ -335,7 +337,7 @@ export function UploadGeotaggedImages() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12, fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
               <div>
                 <strong style={{ color: 'var(--text-primary)' }}>Fraud Indicators:</strong>
-                <ul style={{ paddingLeft: 16, marginTop: 6, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                <ul className="layout-equal-2" style={{ paddingLeft: 16, marginTop: 6, gap: 6 }}>
                   {analysisResult.fraud_indicators ? Object.entries(analysisResult.fraud_indicators).map(([k, v]) => (
                     <li key={k} style={{ color: v ? 'var(--accent-red)' : 'var(--text-muted)', listStyleType: 'disc' }}>
                       {k.replace(/_/g, ' ')}: <span style={{ fontWeight: 600 }}>{v ? 'YES' : 'NO'}</span>

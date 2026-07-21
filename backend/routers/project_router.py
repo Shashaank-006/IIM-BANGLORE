@@ -1,4 +1,5 @@
 import json
+import datetime
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from databases.database import SessionLocal
@@ -17,6 +18,25 @@ def get_db():
         return db
     finally:
         db.close()
+
+
+def log_audit_event(db, actor: str, actor_type: str, action: str, entity: str, entity_name: str, detail: str, severity: str):
+    import datetime
+    try:
+        db_log = AuditLog(
+            id=f"LOG-{int(datetime.datetime.now().timestamp()*1000)}",
+            timestamp=datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+            actor=actor,
+            actor_type=actor_type,
+            action=action,
+            entity=entity,
+            entity_name=entity_name,
+            detail=detail,
+            severity=severity
+        )
+        db.add(db_log)
+    except Exception as e:
+        print(f"Error logging audit event: {e}")
 
 
 class AssignRequest(BaseModel):
@@ -59,32 +79,54 @@ def get_projects():
     
     result = []
     for p in projects:
+        data = {}
         if p.extended_data:
             try:
                 data = json.loads(p.extended_data)
-                data["db_id"] = p.id
-                result.append(data)
             except Exception:
-                result.append({
-                    "id": p.project_id or f"PRJ-{p.id}",
-                    "name": p.project_name,
-                    "scheme": p.scheme,
-                    "budget": p.budget,
-                    "district": p.district,
-                    "state": p.state,
-                    "status": p.status
-                })
-        else:
-            result.append({
-                "id": p.project_id or f"PRJ-{p.id}",
-                "name": p.project_name,
-                "scheme": p.scheme,
-                "budget": p.budget,
-                "district": p.district,
-                "state": p.state,
-                "status": p.status
-            })
-            
+                pass
+                
+        project_id = p.project_id or data.get("id") or f"PRJ-{p.id}"
+        project_name = p.project_name or data.get("name") or "Infrastructure Project"
+        scheme = p.scheme or data.get("scheme") or "PMGSY"
+        
+        scheme_map = {
+            'PMGSY': 'pmgsy', 'MGNREGA': 'mgnrega', 'JJM': 'jjm',
+            'PMAY': 'pmay', 'Smart Cities': 'smart', 'AMRUT': 'amrut'
+        }
+        scheme_id = data.get("schemeId") or scheme_map.get(scheme, 'pmgsy')
+        
+        final_proj = {
+            "id": project_id,
+            "name": project_name,
+            "scheme": scheme,
+            "schemeId": scheme_id,
+            "state": p.state or data.get("state") or "State",
+            "district": p.district or data.get("district") or "District",
+            "village": data.get("village") or p.district or "Village/Taluk",
+            "status": p.status or data.get("status") or "Registered",
+            "budget": float(p.budget or data.get("budget") or 0),
+            "spent": float(data.get("spent") or 0),
+            "completion": int(data.get("completion") or 0),
+            "startDate": data.get("startDate") or "2026-07-01",
+            "expectedEnd": data.get("expectedEnd") or "2026-12-31",
+            "lastUpdated": data.get("lastUpdated") or "",
+            "contractor": data.get("contractor") or "Not Assigned",
+            "contractorId": data.get("contractorId") or "",
+            "coordinates": data.get("coordinates") or [20.5937, 78.9629],
+            "riskScore": data.get("riskScore") or "Low",
+            "flagged": data.get("flagged") or False,
+            "description": data.get("description") or "",
+            "disbursements": data.get("disbursements") or [],
+            "timeline": data.get("timeline") or [],
+            "trustScore": data.get("trustScore") or 82,
+            "aiMonitoringStatus": data.get("aiMonitoringStatus") or "Active",
+            "baselineSatelliteStatus": data.get("baselineSatelliteStatus") or "Captured",
+            "digitalPassport": data.get("digitalPassport") or True,
+            "db_id": p.id
+        }
+        result.append(final_proj)
+        
     return result
 
 
@@ -96,23 +138,187 @@ def get_project(project_id: str):
     if not p:
         raise HTTPException(status_code=404, detail="Project not found")
         
+    data = {}
     if p.extended_data:
         try:
             data = json.loads(p.extended_data)
-            data["db_id"] = p.id
-            return data
         except Exception:
             pass
             
-    return {
-        "id": p.project_id or f"PRJ-{p.id}",
-        "name": p.project_name,
-        "scheme": p.scheme,
-        "budget": p.budget,
-        "district": p.district,
-        "state": p.state,
-        "status": p.status
+    project_id_val = p.project_id or data.get("id") or f"PRJ-{p.id}"
+    project_name = p.project_name or data.get("name") or "Infrastructure Project"
+    scheme = p.scheme or data.get("scheme") or "PMGSY"
+    
+    scheme_map = {
+        'PMGSY': 'pmgsy', 'MGNREGA': 'mgnrega', 'JJM': 'jjm',
+        'PMAY': 'pmay', 'Smart Cities': 'smart', 'AMRUT': 'amrut'
     }
+    scheme_id = data.get("schemeId") or scheme_map.get(scheme, 'pmgsy')
+    
+    return {
+        "id": project_id_val,
+        "name": project_name,
+        "scheme": scheme,
+        "schemeId": scheme_id,
+        "state": p.state or data.get("state") or "State",
+        "district": p.district or data.get("district") or "District",
+        "village": data.get("village") or p.district or "Village/Taluk",
+        "status": p.status or data.get("status") or "Registered",
+        "budget": float(p.budget or data.get("budget") or 0),
+        "spent": float(data.get("spent") or 0),
+        "completion": int(data.get("completion") or 0),
+        "startDate": data.get("startDate") or "2026-07-01",
+        "expectedEnd": data.get("expectedEnd") or "2026-12-31",
+        "lastUpdated": data.get("lastUpdated") or "",
+        "contractor": data.get("contractor") or "Not Assigned",
+        "contractorId": data.get("contractorId") or "",
+        "coordinates": data.get("coordinates") or [20.5937, 78.9629],
+        "riskScore": data.get("riskScore") or "Low",
+        "flagged": data.get("flagged") or False,
+        "description": data.get("description") or "",
+        "disbursements": data.get("disbursements") or [],
+        "timeline": data.get("timeline") or [],
+        "trustScore": data.get("trustScore") or 82,
+        "aiMonitoringStatus": data.get("aiMonitoringStatus") or "Active",
+        "baselineSatelliteStatus": data.get("baselineSatelliteStatus") or "Captured",
+        "digitalPassport": data.get("digitalPassport") or True,
+        "db_id": p.id
+    }
+
+
+def verify_project_for_anomalies(project_name: str, scheme: str, budget: float, state: str, coordinates: list, documents: dict, description: str) -> list:
+    anomalies = []
+    
+    # 1. GIS GPS Boundary Check
+    if coordinates and len(coordinates) == 2:
+        try:
+            lat, lon = float(coordinates[0]), float(coordinates[1])
+            # General India Bounding Box check
+            if not (8.0 <= lat <= 38.0 and 68.0 <= lon <= 98.0):
+                anomalies.append({
+                    "check_type": "GPS Boundary Deviation",
+                    "detail": f"Coordinates [{lat:.4f}, {lon:.4f}] are outside India borders. Possible spoofing detected.",
+                    "confidence": 98,
+                    "severity": "Critical"
+                })
+            else:
+                # State-specific boundary check
+                state_lower = (state or "").lower()
+                if "maharashtra" in state_lower:
+                    if not (15.0 <= lat <= 22.5 and 72.0 <= lon <= 81.0):
+                        anomalies.append({
+                            "check_type": "GPS Boundary Deviation",
+                            "detail": f"Coordinates [{lat:.4f}, {lon:.4f}] lie outside the administrative boundary of Maharashtra.",
+                            "confidence": 94,
+                            "severity": "High"
+                        })
+                elif "tamil" in state_lower:
+                    if not (8.0 <= lat <= 14.0 and 76.0 <= lon <= 80.5):
+                        anomalies.append({
+                            "check_type": "GPS Boundary Deviation",
+                            "detail": f"Coordinates [{lat:.4f}, {lon:.4f}] lie outside the administrative boundary of Tamil Nadu.",
+                            "confidence": 94,
+                            "severity": "High"
+                        })
+                elif "delhi" in state_lower:
+                    if not (28.4 <= lat <= 28.9 and 76.8 <= lon <= 77.4):
+                        anomalies.append({
+                            "check_type": "GPS Boundary Deviation",
+                            "detail": f"Coordinates [{lat:.4f}, {lon:.4f}] lie outside the administrative boundary of Delhi NCR.",
+                            "confidence": 96,
+                            "severity": "High"
+                        })
+        except Exception:
+            anomalies.append({
+                "check_type": "GPS Parse Failure",
+                "detail": "Supplied coordinates are invalid or could not be parsed as floats.",
+                "confidence": 90,
+                "severity": "Medium"
+            })
+    else:
+        anomalies.append({
+            "check_type": "GPS Missing",
+            "detail": "GPS coordinates not supplied. Geofencing checks skipped.",
+            "confidence": 90,
+            "severity": "Medium"
+        })
+
+    # 2. Semantic consistency (NLP Verification)
+    desc_lower = (description or "").lower() + " " + (project_name or "").lower()
+    scheme_upper = (scheme or "").upper()
+    
+    if "JJM" in scheme_upper or "WATER" in desc_lower or "PIPELINE" in desc_lower:
+        water_keywords = ["water", "pipe", "pump", "jal", "supply", "tank", "tap", "borewell", "pipeline", "filtration", "jjm"]
+        if not any(kw in desc_lower for kw in water_keywords):
+            anomalies.append({
+                "check_type": "Scheme-Description Mismatch",
+                "detail": "Registered under Jal Jeevan Mission (JJM) but description lacks water supply or pipeline terminology.",
+                "confidence": 88,
+                "severity": "High"
+            })
+            
+    if "PMGSY" in scheme_upper or "ROAD" in desc_lower or "BRIDGE" in desc_lower or "HIGHWAY" in desc_lower:
+        road_keywords = ["road", "bridge", "path", "concrete", "tarmac", "highway", "pmgsy", "asphalt", "pavement", "lane", "culvert"]
+        if not any(kw in desc_lower for kw in road_keywords):
+            anomalies.append({
+                "check_type": "Scheme-Description Mismatch",
+                "detail": "Registered under PMGSY but description lacks road construction or paving terminology.",
+                "confidence": 88,
+                "severity": "High"
+            })
+
+    if "PMAY" in scheme_upper or "HOUSING" in desc_lower or "HOUSE" in desc_lower:
+        house_keywords = ["house", "home", "awas", "housing", "pmay", "roof", "wall", "flat", "room", "residential"]
+        if not any(kw in desc_lower for kw in house_keywords):
+            anomalies.append({
+                "check_type": "Scheme-Description Mismatch",
+                "detail": "Registered under PMAY (Housing) but description lacks residential or housing construction terminology.",
+                "confidence": 88,
+                "severity": "High"
+            })
+
+    # 3. Budget Outlier (Financial Verification)
+    if "JJM" in scheme_upper and budget > 100000000: # JJM > 10 Crores is outlier
+        anomalies.append({
+            "check_type": "Financial Outlier",
+            "detail": f"Budget of Rs. {budget/10000000:.1f} Cr exceeds the standard cap for Jal Jeevan village pipeline schemes.",
+            "confidence": 91,
+            "severity": "Medium"
+        })
+    elif "PMAY" in scheme_upper and budget > 20000000: # PMAY > 2 Crores is outlier
+        anomalies.append({
+            "check_type": "Financial Outlier",
+            "detail": f"Budget of Rs. {budget/100000:.1f} L exceeds standard PMAY benchmarks for residential construction units.",
+            "confidence": 93,
+            "severity": "High"
+        })
+
+    # 4. Document / Photo Sanity Checks
+    if documents:
+        for doc_key, doc_val in documents.items():
+            if isinstance(doc_val, dict):
+                name = (doc_val.get("name") or "").lower()
+                size = doc_val.get("size") or 0
+                
+                # Check for placeholder filenames
+                suspicious_terms = ["mock", "test", "placeholder", "dummy", "empty"]
+                if any(term in name for term in suspicious_terms):
+                    anomalies.append({
+                        "check_type": "Suspicious Document Upload",
+                        "detail": f"Uploaded baseline document '{doc_val.get('name')}' detected as a placeholder/mock file.",
+                        "confidence": 97,
+                        "severity": "Critical"
+                    })
+                # Check for abnormally small files (empty files under 15KB)
+                elif size > 0 and size < 15000:
+                    anomalies.append({
+                        "check_type": "Invalid Document Resolution",
+                        "detail": f"Uploaded document '{doc_val.get('name')}' is too small ({size/1024:.1f} KB), failing resolution check.",
+                        "confidence": 89,
+                        "severity": "Medium"
+                    })
+                    
+    return anomalies
 
 
 @router.post("/projects")
@@ -160,6 +366,38 @@ def create_project(project_data: dict):
     
     # Generate associated workflow tasks to make the system 100% dynamic
     contractor_name = project_data.get("contractor") or project_data.get("contractorName") or "Coastal Infra Ventures LLP"
+    contractor_id = project_data.get("contractorId") or f"CNT-{1000 + db.query(Contractor).count()}"
+    
+    # Auto-register contractor if not already in the database
+    existing_c = db.query(Contractor).filter(Contractor.id == contractor_id).first()
+    if not existing_c:
+        existing_c = db.query(Contractor).filter(Contractor.name == contractor_name).first()
+        
+    if not existing_c:
+        import random
+        new_c = Contractor(
+            id=contractor_id,
+            name=contractor_name,
+            registration=f"REG/{state[:2].upper() if state else 'IN'}/{datetime.datetime.now().year}/{random.randint(1000, 9999)}",
+            pan=f"AABCP{random.randint(1000, 9999)}Q",
+            gstin=f"27AABCP{random.randint(1000, 9999)}Q1ZM",
+            state=state or "Maharashtra",
+            active_projects=1,
+            completed_projects=0,
+            total_contract_value=budget,
+            risk_score="Low",
+            verification_status="Verified",
+            last_verified=datetime.datetime.now().strftime("%Y-%m-%d"),
+            payment_rating=4.5,
+            red_flags="[]",
+            specializations=json.dumps([project_data.get("projectType") or "Civil Works"])
+        )
+        db.add(new_c)
+        
+    # Update project_data and re-dump to contain correct contractor info
+    project_data["contractor"] = contractor_name
+    project_data["contractorId"] = contractor_id
+    new_project.extended_data = json.dumps(project_data)
     
     # 1. Create a simulated VerificationRequest (disbursement claim)
     claim_id = f"VR-{project_id.split('-')[-1]}"
@@ -167,7 +405,7 @@ def create_project(project_data: dict):
         request_id=claim_id,
         project=project_name,
         contractor=contractor_name,
-        amount=budget * 0.25, # 25% of project budget
+        amount=budget, # 100% of project budget as requested
         stage="Initial Mobilization",
         status="Awaiting Approval"
     )
@@ -185,19 +423,31 @@ def create_project(project_data: dict):
     )
     db.add(new_inspection)
     
-    # 3. Create a simulated AI Anomaly Flag
-    anom_id = f"ANM-{project_id.split('-')[-1]}"
-    new_anomaly = Anomaly(
-        anomaly_id=anom_id,
-        project=project_name,
-        check_type="Exif Misalignment",
-        detail="Coordinates drifted by 62 meters on visual embankment foundation.",
-        confidence=91,
-        status="Flagged",
-        severity="High",
-        deadline="2026-07-25"
+    # 3. Perform REAL Rule-based AI Verification Checks on project parameters
+    detected_anomalies = verify_project_for_anomalies(
+        project_name=project_name,
+        scheme=scheme,
+        budget=budget,
+        state=state,
+        coordinates=project_data.get("coordinates"),
+        documents=project_data.get("documents"),
+        description=project_data.get("description", "")
     )
-    db.add(new_anomaly)
+    
+    # Save any validation discrepancies as anomalies in the database
+    for idx, anom in enumerate(detected_anomalies):
+        anom_id = f"ANM-{project_id.split('-')[-1]}-{idx+1}"
+        new_anomaly = Anomaly(
+            anomaly_id=anom_id,
+            project=project_name,
+            check_type=anom["check_type"],
+            detail=anom["detail"],
+            confidence=anom["confidence"],
+            status="Flagged",
+            severity=anom["severity"],
+            deadline=(datetime.datetime.now() + datetime.timedelta(days=7)).strftime("%Y-%m-%d")
+        )
+        db.add(new_anomaly)
     
     # 4. Create an AuditAssignment task
     task_id = f"AUD-{project_id.split('-')[-1]}"
@@ -425,26 +675,46 @@ def get_schemes():
 def get_contractors():
     db = get_db()
     contractors = db.query(Contractor).all()
-    return [
-        {
+    projects = db.query(Project).all()
+    
+    result = []
+    for c in contractors:
+        assigned_projs = []
+        for p in projects:
+            p_data = {}
+            if p.extended_data:
+                try:
+                    p_data = json.loads(p.extended_data)
+                except Exception:
+                    pass
+            p_c_id = p_data.get("contractorId")
+            p_c_name = p_data.get("contractor") or p_data.get("contractorName")
+            
+            if p_c_id == c.id or (p_c_name and p_c_name.lower() == c.name.lower()):
+                assigned_projs.append(p)
+                
+        active_count = sum(1 for p in assigned_projs if p.status in ["In Progress", "Registered"])
+        completed_count = sum(1 for p in assigned_projs if p.status == "Completed")
+        total_val = sum(p.budget for p in assigned_projs)
+        
+        result.append({
             "id": c.id,
             "name": c.name,
             "registration": c.registration,
             "pan": c.pan,
             "gstin": c.gstin,
             "state": c.state,
-            "activeProjects": c.active_projects,
-            "completedProjects": c.completed_projects,
-            "totalContractValue": c.total_contract_value,
+            "activeProjects": active_count if len(assigned_projs) > 0 else c.active_projects,
+            "completedProjects": completed_count if len(assigned_projs) > 0 else c.completed_projects,
+            "totalContractValue": total_val if len(assigned_projs) > 0 else c.total_contract_value,
             "riskScore": c.risk_score,
             "verificationStatus": c.verification_status,
             "lastVerified": c.last_verified,
             "paymentRating": c.payment_rating,
             "redFlags": json.loads(c.red_flags or "[]"),
             "specializations": json.loads(c.specializations or "[]")
-        }
-        for c in contractors
-    ]
+        })
+    return result
 
 
 @router.get("/budget-data")
@@ -706,6 +976,17 @@ def complete_audit(task_id: str):
             except:
                 pass
                 
+    log_audit_event(
+        db=db,
+        actor="Ranjit Kumar Sahu",
+        actor_type="CAG Auditor",
+        action="Audit Completed",
+        entity=task_id,
+        entity_name=task.project_name,
+        detail=f"National ledger audit completed and verified for project {task.project_name}.",
+        severity="success"
+    )
+            
     db.commit()
     db.refresh(task)
     return {"success": True, "message": "Audit completed successfully"}
@@ -738,6 +1019,17 @@ def approve_request(request_id: str):
         except Exception:
             pass
             
+    log_audit_event(
+        db=db,
+        actor="Sunil Patkar (IAS)",
+        actor_type="District Collector",
+        action="Claim Approved",
+        entity=request_id,
+        entity_name=claim.project,
+        detail=f"Disbursement claim of Rs. {claim.amount/100000:.1f} L approved for {claim.stage}.",
+        severity="success"
+    )
+            
     db.commit()
     return {"success": True, "message": "Claim approved, funds released"}
 
@@ -750,6 +1042,18 @@ def reject_request(request_id: str):
         raise HTTPException(status_code=404, detail="Verification request claim not found")
         
     claim.status = "Rejected"
+    
+    log_audit_event(
+        db=db,
+        actor="Sunil Patkar (IAS)",
+        actor_type="District Collector",
+        action="Claim Rejected",
+        entity=request_id,
+        entity_name=claim.project,
+        detail=f"Disbursement claim of Rs. {claim.amount/100000:.1f} L rejected for {claim.stage}.",
+        severity="danger"
+    )
+    
     db.commit()
     return {"success": True, "message": "Claim rejected"}
 
@@ -839,6 +1143,18 @@ def respond_to_anomaly(anomaly_id: str, req: AnomalyResponseRequest):
         
     an.response = req.response
     an.status = "Investigating"
+    
+    log_audit_event(
+        db=db,
+        actor="Municipal Officer",
+        actor_type="Municipal Officer",
+        action="Anomaly Clarification Submitted",
+        entity=anomaly_id,
+        entity_name=an.project,
+        detail=f"Clarification response logged for anomaly flag {anomaly_id}.",
+        severity="info"
+    )
+    
     db.commit()
     return {"success": True, "message": "Clarification response logged"}
 
@@ -850,6 +1166,18 @@ def update_anomaly_status(anomaly_id: str, req: AnomalyStatusRequest):
     if not an:
         raise HTTPException(status_code=404, detail="Anomaly flag record not found")
     an.status = req.status
+    
+    log_audit_event(
+        db=db,
+        actor="Demo User",
+        actor_type="State Audit Officer",
+        action="Anomaly Status Updated",
+        entity=anomaly_id,
+        entity_name=an.project,
+        detail=f"AI anomaly status updated to {req.status}.",
+        severity="warning"
+    )
+    
     db.commit()
     return {"success": True, "message": f"Anomaly status updated to {req.status}"}
 
@@ -885,11 +1213,21 @@ def add_project_update(project_id: str, req: ProjectUpdateRequest):
             data = json.loads(project.extended_data)
             if req.completion is not None:
                 data["completion"] = req.completion
-                project.completion = req.completion
             data["lastUpdated"] = now
             project.extended_data = json.dumps(data)
         except Exception:
             pass
+            
+    log_audit_event(
+        db=db,
+        actor="Amit Deshmukh",
+        actor_type="Municipal Officer",
+        action="Progress Updated",
+        entity=project_id,
+        entity_name=project.project_name if project else "Project",
+        detail=req.note or f"Completion percentage updated to {req.completion}%.",
+        severity="info"
+    )
             
     db.commit()
     return {"success": True}
@@ -932,10 +1270,20 @@ def submit_completion_report(req: CompletionReportRequest):
                 data = json.loads(project.extended_data)
                 data["status"] = "Completed"
                 data["completion"] = 100
-                project.completion = 100
                 project.extended_data = json.dumps(data)
             except Exception:
                 pass
+                
+    log_audit_event(
+        db=db,
+        actor="Amit Deshmukh",
+        actor_type="Municipal Officer",
+        action="Completion Report Submitted",
+        entity=req.project,
+        entity_name=project.project_name if project else req.project,
+        detail=req.remarks or "Milestone verification requested.",
+        severity="info"
+    )
                 
     db.commit()
     return {"success": True, "report_id": report_id}

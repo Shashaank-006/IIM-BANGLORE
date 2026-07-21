@@ -89,7 +89,8 @@ export function AuthProvider({ children }) {
     } catch (err) {
       console.error("Backend auth failed, trying offline mock accounts...", err);
       // Robust fallback to keep local dev working if server is not running
-      const found = MOCK_USERS.find(
+      const localUsers = JSON.parse(localStorage.getItem('gw_local_users') || '[]');
+      const found = [...MOCK_USERS, ...localUsers].find(
         (u) => u.email.toLowerCase() === email.toLowerCase() && u.password === password
       );
 
@@ -103,7 +104,7 @@ export function AuthProvider({ children }) {
         role: found.role,
         employeeId: found.employeeId,
         department: found.department,
-        initials: found.initials,
+        initials: found.initials || 'US',
       };
 
       localStorage.setItem('gw_user', JSON.stringify(sessionUser));
@@ -138,19 +139,22 @@ export function AuthProvider({ children }) {
       return sessionUser;
     } catch (err) {
       console.error("Backend signup failed, performing offline signup fallback...", err);
+      const initials = formData.fullName
+        ? formData.fullName.split(' ').slice(0, 2).map((n) => n[0]).join('').toUpperCase()
+        : 'US';
       const newUser = {
         email: formData.email,
         name: formData.fullName,
         role: formData.role,
         employeeId: formData.employeeId,
         department: formData.department,
-        initials: formData.fullName
-          .split(' ')
-          .slice(0, 2)
-          .map((n) => n[0])
-          .join('')
-          .toUpperCase(),
+        password: formData.password,
+        initials,
       };
+      const localUsers = JSON.parse(localStorage.getItem('gw_local_users') || '[]');
+      localUsers.push(newUser);
+      localStorage.setItem('gw_local_users', JSON.stringify(localUsers));
+
       localStorage.setItem('gw_user', JSON.stringify(newUser));
       setUser(newUser);
       return newUser;

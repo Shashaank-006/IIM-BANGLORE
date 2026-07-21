@@ -134,89 +134,66 @@ export function ProjectProvider({ children }) {
     }
   });
 
-  // Load data from database on mount
-  useEffect(() => {
-    async function loadData() {
-      try {
-        const projData = await api.projects.getAll();
-        if (projData && Array.isArray(projData)) {
-          setDbProjects(projData);
-          if (projData.length === 0) {
-            localStorage.removeItem(STORAGE_KEY);
-            localStorage.removeItem(AUDIT_STORAGE_KEY);
-            setRegisteredProjects([]);
-            setRegistrationAuditLogs([]);
-          }
-        }
-      } catch (err) {
-        console.warn("Could not load projects from API.", err);
-      }
+  const refreshProjects = useCallback(async () => {
+    try {
+      const [
+        projData,
+        contractorsData,
+        logsData,
+        schemesData,
+        budget,
+        kpi,
+        feed,
+        notifs
+      ] = await Promise.all([
+        api.projects.getAll().catch(() => []),
+        api.contractors.getAll().catch(() => []),
+        api.auditLogs.getAll().catch(() => []),
+        api.schemes.getAll().catch(() => []),
+        api.budget.get().catch(() => null),
+        api.kpi.get().catch(() => null),
+        api.activityFeed.get().catch(() => []),
+        api.notifications.getAll().catch(() => [])
+      ]);
 
-      try {
-        const contractorsData = await api.contractors.getAll();
-        if (contractorsData && Array.isArray(contractorsData)) {
-          setDbContractors(contractorsData);
+      if (projData && Array.isArray(projData)) {
+        setDbProjects(projData);
+        if (projData.length === 0) {
+          localStorage.removeItem(STORAGE_KEY);
+          localStorage.removeItem(AUDIT_STORAGE_KEY);
+          setRegisteredProjects([]);
+          setRegistrationAuditLogs([]);
         }
-      } catch (err) {
-        console.warn("Could not load contractors from API.", err);
       }
-
-      try {
-        const logsData = await api.auditLogs.getAll();
-        if (logsData && Array.isArray(logsData)) {
-          setDbAuditLogs(logsData);
-        }
-      } catch (err) {
-        console.warn("Could not load audit logs from API.", err);
+      if (contractorsData && Array.isArray(contractorsData)) {
+        setDbContractors(contractorsData);
       }
-
-      try {
-        const schemesData = await api.schemes.getAll();
-        if (schemesData && Array.isArray(schemesData)) {
-          setSchemes(schemesData);
-        }
-      } catch (err) {
-        console.warn("Could not load schemes from API.", err);
+      if (logsData && Array.isArray(logsData)) {
+        setDbAuditLogs(logsData);
       }
-
-      try {
-        const budget = await api.budget.get();
-        if (budget) {
-          setBudgetData(budget);
-        }
-      } catch (err) {
-        console.warn("Could not load budget data from API.", err);
+      if (schemesData && Array.isArray(schemesData)) {
+        setSchemes(schemesData);
       }
-
-      try {
-        const kpi = await api.kpi.get();
-        if (kpi) {
-          setKpiData(kpi);
-        }
-      } catch (err) {
-        console.warn("Could not load KPI data from API.", err);
+      if (budget) {
+        setBudgetData(budget);
       }
-
-      try {
-        const feed = await api.activityFeed.get();
-        if (feed && Array.isArray(feed)) {
-          setActivityFeed(feed);
-        }
-      } catch (err) {
-        console.warn("Could not load activity feed from API.", err);
+      if (kpi) {
+        setKpiData(kpi);
       }
-
-      try {
-        const notifs = await api.notifications.getAll();
-        if (notifs && Array.isArray(notifs)) {
-          setNotifications(notifs);
-        }
-      } catch (err) {
-        console.warn("Could not load notifications from API.", err);
+      if (feed && Array.isArray(feed)) {
+        setActivityFeed(feed);
       }
+      if (notifs && Array.isArray(notifs)) {
+        setNotifications(notifs);
+      }
+    } catch (err) {
+      console.warn("Could not load data from API concurrently.", err);
     }
-    loadData();
   }, []);
+
+  useEffect(() => {
+    refreshProjects();
+  }, [refreshProjects]);
 
   const allProjects = useMemo(() => {
     if (dbProjects.length > 0) {
@@ -251,11 +228,7 @@ export function ProjectProvider({ children }) {
     // Attempt to register on the backend
     try {
       await api.projects.create(project);
-      // Reload projects list from backend
-      const updatedList = await api.projects.getAll();
-      if (updatedList && Array.isArray(updatedList)) {
-        setDbProjects(updatedList);
-      }
+      await refreshProjects();
     } catch (err) {
       console.warn("Could not sync project creation with backend, saving locally.", err);
     }
@@ -273,7 +246,7 @@ export function ProjectProvider({ children }) {
     });
 
     return project;
-  }, []);
+  }, [refreshProjects]);
 
   const getProject = useCallback(
     (id) => allProjects.find((p) => p.id === id),
@@ -326,6 +299,7 @@ export function ProjectProvider({ children }) {
       loadNotifications,
       markNotificationRead,
       markAllNotificationsRead,
+      refreshProjects,
     }),
     [
       allProjects,
@@ -343,6 +317,7 @@ export function ProjectProvider({ children }) {
       loadNotifications,
       markNotificationRead,
       markAllNotificationsRead,
+      refreshProjects,
     ]
   );
 

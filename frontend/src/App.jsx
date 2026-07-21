@@ -5,7 +5,6 @@ import { useAuth } from './context/AuthContext';
 // Layout
 import Sidebar from './components/layout/Sidebar';
 import Topbar from './components/layout/Topbar';
-import Footer from './components/layout/Footer';
 
 // Existing shared pages
 import Dashboard from './components/pages/Dashboard';
@@ -67,7 +66,6 @@ function AppShell({ children }) {
         <div className="page-wrapper">
           {typeof children === 'function' ? children(searchQuery) : children}
         </div>
-        <Footer />
       </div>
     </div>
   );

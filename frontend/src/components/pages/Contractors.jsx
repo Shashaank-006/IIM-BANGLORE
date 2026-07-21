@@ -12,13 +12,21 @@ const formatINR = (value) => {
 };
 
 export default function Contractors({ searchQuery }) {
-  const { allContractors: contractors } = useProjects();
+  const { allContractors: contractors, allProjects } = useProjects();
   // Filters State
   const [statusFilter, setStatusFilter] = useState('All');
   const [riskFilter, setRiskFilter] = useState('All');
 
+  // Filter contractors to only show those who have at least 1 project assigned
+  const contractorsWithProjects = contractors.filter(c => 
+    allProjects.some(p => 
+      p.contractorId === c.id || 
+      (p.contractor && p.contractor.toLowerCase() === c.name.toLowerCase())
+    )
+  );
+
   // Filter contractors
-  const filtered = contractors.filter(c => {
+  const filtered = contractorsWithProjects.filter(c => {
     const matchesSearch = 
       c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       c.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -202,6 +210,35 @@ export default function Contractors({ searchQuery }) {
                 </span>
               ))}
             </div>
+
+            {/* Assigned Projects List */}
+            {(() => {
+              const contractorProjects = allProjects.filter(p => 
+                p.contractorId === c.id || 
+                (p.contractor && p.contractor.toLowerCase() === c.name.toLowerCase())
+              );
+              return (
+                <div style={{ fontSize: '0.8rem', borderTop: '1px solid var(--border-subtle)', paddingTop: '10px' }}>
+                  <span className="label" style={{ fontSize: '0.62rem', display: 'block', marginBottom: '6px' }}>Assigned Projects ({contractorProjects.length})</span>
+                  {contractorProjects.length > 0 ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      {contractorProjects.map((p) => (
+                        <div key={p.id} className="flex justify-between items-center" style={{ background: 'var(--bg-elevated)', padding: '6px 10px', borderRadius: '4px', border: '1px solid var(--border-subtle)' }}>
+                          <span style={{ fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '200px' }} title={p.name}>
+                            {p.name}
+                          </span>
+                          <span className={`badge ${p.status === 'Completed' ? 'badge-green' : p.status === 'Delayed' ? 'badge-amber' : p.status === 'Suspended' ? 'badge-red' : 'badge-blue'}`} style={{ fontSize: '0.65rem', padding: '1px 6px' }}>
+                            {p.status}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>No active projects assigned.</div>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* Red Flags / Warnings list */}
             <div

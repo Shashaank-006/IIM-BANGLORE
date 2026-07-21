@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { api } from '../../../services/api';
 import { useAuth } from '../../../context/AuthContext';
+import { useProjects } from '../../../context/ProjectContext';
 
 // ─── AUDIT QUEUE ───────────────────────────────────────────────────────────────
 export function AuditQueue() {
@@ -15,6 +16,7 @@ export function AuditQueue() {
   const [loading, setLoading] = useState(true);
   const [selectedTask, setSelectedTask] = useState(null);
   const { user } = useAuth();
+  const { refreshProjects } = useProjects();
 
   useEffect(() => {
     async function loadTasks() {
@@ -78,6 +80,7 @@ Comptroller & Auditor General of India
     if (!selectedTask) return;
     try {
       await api.audit.complete(selectedTask.task_id);
+      await refreshProjects();
       alert("Audit completed and report uploaded to national ledger!");
       setSelectedTask(null);
       
@@ -210,7 +213,7 @@ Comptroller & Auditor General of India
               </p>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', background: 'var(--bg-elevated)', padding: '12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
+            <div className="layout-equal-2" style={{ background: 'var(--bg-elevated)', padding: '12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
               <div>
                 <span className="label" style={{ fontSize: '0.62rem' }}>State Jurisdiction</span>
                 <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-primary)', marginTop: '2px' }}>{selectedTask.state}</div>
@@ -229,7 +232,7 @@ Comptroller & Auditor General of India
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <div className="layout-equal-2">
               <div>
                 <span className="label">Total Budget</span>
                 <div style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--accent-blue)', marginTop: '2px' }}>
@@ -381,7 +384,7 @@ export function EvidenceViewer() {
   }
 
   return (
-    <div className="grid-3" style={{ gridTemplateColumns: '1fr 2fr', gap: '20px' }}>
+    <div className="layout-1-2" style={{ gap: '20px' }}>
       <div className="card flex flex-col justify-between" style={{ height: '520px', padding: '16px' }}>
         <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '10px' }}>
           <div>
@@ -419,7 +422,7 @@ export function EvidenceViewer() {
           <span className="label">Visual Analysis Workbench</span>
           <h3 className="section-title mt-1 mb-4">{evidences[selectedItem]?.title}</h3>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', height: '320px' }}>
+          <div className="layout-equal-2" style={{ gap: '16px' }}>
             <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
               <div style={{ position: 'absolute', top: '10px', left: '10px', background: 'rgba(0,0,0,0.6)', color: '#fff', fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px', zIndex: 2 }}>
                 Ground Inspection Photo
